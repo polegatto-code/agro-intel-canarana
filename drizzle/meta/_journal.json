@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1778522797643,
+      "tag": "0000_peaceful_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1778523046949,
+      "tag": "0001_overrated_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778524764647,
+      "tag": "0002_amusing_viper",
+      "breakpoints": true
+    }
+  ]
 }

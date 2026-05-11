@@ -1,0 +1,377 @@
+import { logger } from './logger';
+import { telegramService } from './telegram';
+import { analyzeWeather, saveWeatherAnalysis } from './weather';
+import * as db from '../db';
+
+export interface ScheduleConfig {
+  weatherCheckHour: number; // 0-23
+  marketAlertHour: number;
+  urgentAlertCheckInterval: number; // minutes
+}
+
+class Scheduler {
+  private weatherCheckInterval: NodeJS.Timeout | null = null;
+  private marketAlertInterval: NodeJS.Timeout | null = null;
+  private urgentAlertInterval: NodeJS.Timeout | null = null;
+  private isRunning = false;
+
+  /**
+   * Start the scheduler
+   */
+  start(config: ScheduleConfig): void {
+    if (this.isRunning) {
+      logger.log({
+        service: 'scheduler',
+        action: 'start',
+        level: 'warn',
+        status: 'pending',
+        message: 'Scheduler is already running',
+      });
+      return;
+    }
+
+    this.isRunning = true;
+
+    logger.log({
+      service: 'scheduler',
+      action: 'start',
+      level: 'info',
+      status: 'success',
+      message: `Scheduler started. Weather check at ${config.weatherCheckHour}:00, Market alert at ${config.marketAlertHour}:00`,
+    });
+
+    // Schedule weather check
+    this.scheduleWeatherCheck(config.weatherCheckHour);
+
+    // Schedule market alerts
+    this.scheduleMarketAlerts(config.marketAlertHour);
+
+    // Schedule urgent alert checks
+    this.scheduleUrgentAlerts(config.urgentAlertCheckInterval);
+
+    // Process Telegram retry queue every minute
+    this.scheduleRetryQueue();
+  }
+
+  /**
+   * Stop the scheduler
+   */
+  stop(): void {
+    if (this.weatherCheckInterval) clearInterval(this.weatherCheckInterval);
+    if (this.marketAlertInterval) clearInterval(this.marketAlertInterval);
+    if (this.urgentAlertInterval) clearInterval(this.urgentAlertInterval);
+
+    this.isRunning = false;
+
+    logger.log({
+      service: 'scheduler',
+      action: 'stop',
+      level: 'info',
+      status: 'success',
+      message: 'Scheduler stopped',
+    });
+  }
+
+  /**
+   * Schedule weather check at specific hour
+   */
+  private scheduleWeatherCheck(hour: number): void {
+    const checkTime = () => {
+      const now = new Date();
+      return now.getHours() === hour && now.getMinutes() === 0;
+    };
+
+    this.weatherCheckInterval = setInterval(async () => {
+      if (checkTime()) {
+        await this.executeWeatherCheck();
+      }
+    }, 60000); // Check every minute
+  }
+
+  /**
+   * Execute weather check for all users
+   */
+  private async executeWeatherCheck(): Promise<void> {
+    logger.log({
+      service: 'scheduler',
+      action: 'weather_check',
+      level: 'info',
+      status: 'pending',
+      message: 'Starting daily weather check',
+    });
+
+    try {
+      // TODO: Get all users from database
+      // For now, this is a placeholder that will be called by the cron job
+      logger.log({
+        service: 'scheduler',
+        action: 'weather_check',
+        level: 'info',
+        status: 'success',
+        message: 'Weather check completed',
+      });
+    } catch (error) {
+      logger.log({
+        service: 'scheduler',
+        action: 'weather_check',
+        level: 'error',
+        status: 'failed',
+        message: 'Weather check failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Schedule market alerts at specific hour
+   */
+  private scheduleMarketAlerts(hour: number): void {
+    const checkTime = () => {
+      const now = new Date();
+      return now.getHours() === hour && now.getMinutes() === 0;
+    };
+
+    this.marketAlertInterval = setInterval(async () => {
+      if (checkTime()) {
+        await this.executeMarketAlerts();
+      }
+    }, 60000); // Check every minute
+  }
+
+  /**
+   * Execute market alerts for all users
+   */
+  private async executeMarketAlerts(): Promise<void> {
+    logger.log({
+      service: 'scheduler',
+      action: 'market_alerts',
+      level: 'info',
+      status: 'pending',
+      message: 'Starting market alerts check',
+    });
+
+    try {
+      // TODO: Get all users from database
+      // For now, this is a placeholder
+      logger.log({
+        service: 'scheduler',
+        action: 'market_alerts',
+        level: 'info',
+        status: 'success',
+        message: 'Market alerts check completed',
+      });
+    } catch (error) {
+      logger.log({
+        service: 'scheduler',
+        action: 'market_alerts',
+        level: 'error',
+        status: 'failed',
+        message: 'Market alerts check failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Schedule urgent alert checks
+   */
+  private scheduleUrgentAlerts(intervalMinutes: number): void {
+    this.urgentAlertInterval = setInterval(async () => {
+      await this.checkUrgentAlerts();
+    }, intervalMinutes * 60 * 1000);
+  }
+
+  /**
+   * Check for urgent alerts
+   */
+  private async checkUrgentAlerts(): Promise<void> {
+    logger.log({
+      service: 'scheduler',
+      action: 'urgent_alerts',
+      level: 'debug',
+      status: 'pending',
+      message: 'Checking for urgent alerts',
+    });
+
+    // TODO: Implement urgent alert checking
+  }
+
+  /**
+   * Process Telegram retry queue
+   */
+  private scheduleRetryQueue(): void {
+    setInterval(async () => {
+      // TODO: Get all user tokens and process retry queue
+      logger.log({
+        service: 'scheduler',
+        action: 'retry_queue',
+        level: 'debug',
+        status: 'pending',
+        message: 'Processing Telegram retry queue',
+      });
+    }, 60000); // Every minute
+  }
+
+  /**
+   * Get scheduler status
+   */
+  getStatus(): {
+    isRunning: boolean;
+    uptime?: number;
+  } {
+    return {
+      isRunning: this.isRunning,
+    };
+  }
+}
+
+export const scheduler = new Scheduler();
+
+/**
+ * Execute weather check for a specific user
+ * This is called by the cron job or manually
+ */
+export async function executeWeatherCheckForUser(
+  userId: number,
+  telegramToken: string,
+  telegramChatId: string,
+  minHumidity: number = 50,
+  maxHumidity: number = 90,
+  maxTemperature: number = 30,
+  maxWindSpeed: number = 15
+): Promise<void> {
+  logger.log({
+    service: 'weather_job',
+    action: 'execute',
+    level: 'info',
+    status: 'pending',
+    userId,
+    message: 'Starting weather check job',
+  });
+
+  try {
+    // Analyze weather
+    const analysis = await analyzeWeather(
+      userId,
+      minHumidity,
+      maxHumidity,
+      maxTemperature,
+      maxWindSpeed
+    );
+
+    // Save to database
+    await saveWeatherAnalysis(userId, analysis);
+
+    // Format message for Telegram
+    const message = formatWeatherMessage(analysis);
+
+    // Send to Telegram
+    const priority = analysis.overallClassification === 'excelente' ? 'high' : 'normal';
+    await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
+
+    logger.log({
+      service: 'weather_job',
+      action: 'execute',
+      level: 'info',
+      status: 'success',
+      userId,
+      message: 'Weather check job completed successfully',
+      metadata: { classification: analysis.overallClassification },
+    });
+  } catch (error) {
+    logger.log({
+      service: 'weather_job',
+      action: 'execute',
+      level: 'error',
+      status: 'failed',
+      userId,
+      message: 'Weather check job failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    // Send error notification
+    const errorMessage = `❌ <b>Erro na Coleta Climática</b>\n\nNão foi possível processar os dados climáticos.\nTente novamente mais tarde.`;
+    await telegramService.sendMessage(telegramToken, telegramChatId, errorMessage, 'high');
+  }
+}
+
+/**
+ * Format weather analysis into Telegram message
+ */
+function formatWeatherMessage(analysis: any): string {
+  const classificationEmoji = {
+    excelente: '🟢',
+    boa: '🟡',
+    moderada: '🟠',
+    ruim: '🔴',
+    'nao-recomendada': '⛔',
+  };
+
+  const emoji = classificationEmoji[analysis.overallClassification as keyof typeof classificationEmoji] || '❓';
+  const classification = analysis.overallClassification.toUpperCase();
+
+  let message = `${emoji} <b>RELATÓRIO CLIMÁTICO - CANARANA-MT</b>\n\n`;
+  message += `<b>Classificação Operacional:</b> ${classification}\n`;
+  message += `<b>Score:</b> ${analysis.score}/100\n\n`;
+
+  message += `<b>Condições Atuais:</b>\n`;
+  message += `🌡️ Temperatura: ${analysis.currentTemp}°C\n`;
+  message += `💧 Umidade: ${analysis.currentHumidity}%\n`;
+  message += `💨 Vento: ${analysis.currentWindSpeed} km/h\n\n`;
+
+  if (analysis.isApplicationRecommended) {
+    message += `<b>✅ Janela de Aplicação Recomendada:</b>\n`;
+    message += `⏰ ${analysis.applicationWindowStart}:00 às ${analysis.applicationWindowEnd}:00\n\n`;
+  } else {
+    message += `<b>❌ Nenhuma janela ideal encontrada hoje</b>\n\n`;
+  }
+
+  if (analysis.notes.length > 0) {
+    message += `<b>Observações:</b>\n`;
+    analysis.notes.forEach((note: string) => {
+      message += `• ${note}\n`;
+    });
+  }
+
+  return message;
+}
+
+/**
+ * Execute market analysis for a specific user
+ */
+export async function executeMarketAnalysisForUser(
+  userId: number,
+  telegramToken: string,
+  telegramChatId: string
+): Promise<void> {
+  logger.log({
+    service: 'market_job',
+    action: 'execute',
+    level: 'info',
+    status: 'pending',
+    userId,
+    message: 'Starting market analysis job',
+  });
+
+  try {
+    // TODO: Implement market analysis
+    logger.log({
+      service: 'market_job',
+      action: 'execute',
+      level: 'info',
+      status: 'success',
+      userId,
+      message: 'Market analysis job completed',
+    });
+  } catch (error) {
+    logger.log({
+      service: 'market_job',
+      action: 'execute',
+      level: 'error',
+      status: 'failed',
+      userId,
+      message: 'Market analysis job failed',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
