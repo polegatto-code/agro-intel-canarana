@@ -383,3 +383,42 @@ export async function updateMarketAnalysisDaily(analysisId: number, updates: Par
     .set(updates)
     .where(eq(marketAnalysisDaily.id, analysisId));
 }
+
+
+/**
+ * Get all users with their settings
+ */
+export async function getAllUsersWithSettings() {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[Database] Cannot get users: database not available');
+    return [];
+  }
+
+  try {
+    const result = await db
+      .select({
+        userId: users.id,
+        openId: users.openId,
+        name: users.name,
+        email: users.email,
+        telegramToken: userSettings.telegramToken,
+        telegramChatId: userSettings.telegramChatId,
+        minHumidity: userSettings.minHumidity,
+        maxHumidity: userSettings.maxHumidity,
+        maxTemperature: userSettings.maxTemperature,
+        maxWindSpeed: userSettings.maxWindSpeed,
+        enableWeatherNotifications: userSettings.enableWeatherNotifications,
+        enableMarketNotifications: userSettings.enableMarketNotifications,
+        marketAlertFrequency: userSettings.marketAlertFrequency,
+      })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.userId));
+
+    return result;
+  } catch (error) {
+    console.error('[Database] Failed to get users with settings:', error);
+    return [];
+  }
+}
+

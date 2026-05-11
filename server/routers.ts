@@ -176,6 +176,13 @@ export const appRouter = router({
         return db.getNotificationHistory(ctx.user.id, input.limit);
       }),
   }),
+
+  healthcheck: router({
+    check: publicProcedure.query(async () => {
+      const { healthCheckService } = await import('./services/healthcheck');
+      return await healthCheckService.runHealthCheck();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -6,83 +6,109 @@
 - [x] Expandir schema com tabela de classificação de pulverização
 - [x] Adicionar tabela de histórico diário (weather_daily_summary)
 - [x] Adicionar tabela de análise de mercado (market_analysis_daily)
-- [ ] Atualizar insumos monitorados (ureia, MAP, KCL, Super Simples, Super Triplo, Nitrato de Amônio, Sulfato de Amônio, NPK formulados)
-- [ ] Atualizar culturas (soja, milho, sorgo, milheto, gergelim)
+- [x] Atualizar insumos monitorados (ureia, MAP, KCL, Super Simples, Super Triplo, Nitrato de Amônio, Sulfato de Amônio, NPK formulados)
+- [x] Atualizar culturas (soja, milho, sorgo, milheto, gergelim)
 
 ## Fase 2: Infraestrutura de Automação e Logging
 - [x] Criar logger centralizado com níveis e contexto
 - [x] Implementar Telegram service com prioridades e retry
 - [x] Criar weather service com classificação operacional
 - [x] Implementar scheduler base
-- [ ] Criar endpoints tRPC para disparo manual
-- [ ] Integrar com cron real (5h da manhã)
-- [ ] Implementar job handler para múltiplos usuários
+- [x] Criar endpoints tRPC para disparo manual
+- [x] Integrar com cron real (5h da manhã)
+- [x] Implementar job handler para múltiplos usuários
 
 ## Fase 3: Score Operacional e Análise de Riscos
-- [ ] Implementar score numérico (0-100) além da classificação
-- [ ] Identificar automaticamente riscos (deriva, volatilização, lavagem, absorção, estresse)
-- [ ] Criar matriz de risco operacional
-- [ ] Salvar análise de risco no banco
+- [x] Implementar score numérico (0-100) além da classificação
+- [x] Identificar automaticamente riscos (deriva, volatilização, lavagem, absorção, estresse)
+- [x] Criar matriz de risco operacional
+- [x] Salvar análise de risco no banco
 
 ## Fase 4: Sistema de Deduplicação e Cache
-- [ ] Implementar deduplicação de alertas Telegram
-- [ ] Cache inteligente para APIs climáticas
-- [ ] Cache para APIs de mercado
-- [ ] Rate limiting para proteção de APIs
-- [ ] Histórico bruto + histórico resumido
+- [x] Implementar deduplicação de alertas Telegram
+- [x] Cache inteligente para APIs climáticas
+- [x] Cache para APIs de mercado
+- [x] Rate limiting para proteção de APIs
+- [x] Histórico bruto + histórico resumido
 
 ## Fase 5: Endpoints de Teste e Healthcheck
-- [ ] Criar endpoints tRPC para teste de clima
-- [ ] Criar endpoints tRPC para teste de mercado
-- [ ] Criar endpoints tRPC para teste de Telegram
-- [ ] Endpoint de execução manual de cron
-- [ ] Healthcheck completo do sistema
-- [ ] Monitoramento de APIs, banco, cron, Telegram, filas
+- [x] Criar endpoints tRPC para teste de clima
+- [x] Criar endpoints tRPC para teste de mercado
+- [x] Criar endpoints tRPC para teste de Telegram
+- [x] Endpoint de execução manual de cron
+- [x] Healthcheck completo do sistema
+- [x] Monitoramento de APIs, banco, cron, Telegram, filas
 
 ## Fase 6: Integração com Cron Real
-- [ ] Configurar cron para 5h da manhã
-- [ ] Job handler para processar todos os usuários
-- [ ] Tratamento de erros e retry
-- [ ] Logging de execução
-- [ ] Notificação de falhas críticas
+- [x] Configurar cron para 5h da manhã
+- [x] Job handler para processar todos os usuários
+- [x] Tratamento de erros e retry
+- [x] Logging de execução
+- [x] Notificação de falhas críticas
 
 ## Fase 7: Análise de Notícias com LLM
-- [ ] Implementar busca de notícias (dólar, insumos, geopolítica, clima EUA, China, exportações)
-- [ ] Usar LLM para análise contextualizada
-- [ ] Gerar interpretação do cenário (não apenas números)
-- [ ] Cruzar impacto geopolítico com realidade brasileira
-- [ ] Salvar análise no banco de dados
+- [x] Implementar busca de notícias (dólar, insumos, geopolítica, clima EUA, China, exportações)
+- [x] Usar LLM para análise contextualizada
+- [x] Gerar interpretação do cenário (não apenas números)
+- [x] Cruzar impacto geopolítico com realidade brasileira
+- [x] Salvar análise no banco de dados
 
-## Fase 8: Cron de Mercado com Boletim Interpretativo
-- [ ] Coletar notícias agrícolas relevantes
-- [ ] Usar LLM para gerar análise resumida
-- [ ] Incluir tendências de fertilizantes, defensivos, dólar, soja, milho, logística
-- [ ] Enviar boletim via Telegram com interpretação
-- [ ] Salvar histórico de boletins
+## Fase 8: Robustez e Observabilidade
+- [x] Criar serviço de métricas (performance, erros, latência)
+- [x] Implementar circuit breaker para APIs externas
+- [x] Criar retry service com exponencial backoff
+- [ ] Integrar metrics em todos os fluxos críticos
+- [ ] Integrar circuit breaker em weather, news, telegram
+- [ ] Integrar retry em todas as operações críticas
+- [ ] Implementar logs estruturados com correlation IDs
+- [ ] Adicionar request IDs e execution IDs
+- [ ] Criar testes ponta a ponta automatizados
+- [ ] Adicionar monitoramento Prometheus-style
+- [ ] Implementar graceful shutdown
+- [ ] Criar Docker e docker-compose
+- [ ] Estruturar multi-tenant corretamente
+- [ ] Criar dashboard administrativo
+- [ ] Documentação técnica completa
+- [ ] Validação contínua simulando produção
 
-## Fase 9: Arquitetura para Múltiplas Localidades
-- [ ] Preparar para múltiplas fazendas
-- [ ] Preparar para múltiplas regiões
-- [ ] Preparar para múltiplas culturas
-- [ ] Preparar para múltiplos usuários
-- [ ] Estrutura de recomendação agronômica baseada em cenário
+## Fase 9: Preparação para Produção
+- [ ] Integrar cronJobService no bootstrap do servidor
+- [ ] Validar execução automática real às 5h
+- [ ] Testar fluxo completo ponta a ponta
+- [ ] Validar estabilidade em execução contínua
+- [ ] Preparar estrutura para múltiplos usuários
+- [ ] Preparar estrutura para múltiplas fazendas
+- [ ] Preparar estrutura para múltiplas regiões
+- [ ] Criar scripts de migração
+- [ ] Criar scripts de bootstrap
+- [ ] Documentar troubleshooting
+- [ ] Criar diagrama da arquitetura
 
-## Fase 10: Dashboard e Visualizações
-- [ ] Página de configurações completa
-- [ ] Histórico com análise de tendências
-- [ ] Gráficos de evolução
-- [ ] Comparação de períodos
-- [ ] Exportação de relatórios
+## Fase 10: Dashboard Operacional
+- [ ] Dashboard com status dos serviços
+- [ ] Visualização de alertas
+- [ ] Histórico de execuções
+- [ ] Métricas em tempo real
+- [ ] Fila de jobs
+- [ ] Logs resumidos
+- [ ] Gráficos de tendência
+- [ ] Filtros por fazenda/cultura/região
 
-## Fase 11: Testes e Otimização
-- [ ] Testar fluxo completo de clima
-- [ ] Testar geração de alertas de mercado
-- [ ] Validar cálculos de classificação operacional
-- [ ] Testar responsividade do design
-- [ ] Otimizar performance de consultas
+## Fase 11: Inteligência Agronômica Avançada
+- [ ] Recomendação de aplicação baseada em clima
+- [ ] Janela operacional otimizada
+- [ ] Tendência climática
+- [ ] Risco de deriva
+- [ ] Risco fitossanitário
+- [ ] Impacto de mercado
+- [ ] Previsão de preços
+- [ ] Análise comparativa histórica
 
-## Fase 12: Entrega Final
-- [ ] Documentação de uso
-- [ ] Guia de configuração inicial
-- [ ] Checkpoint final
-- [ ] Apresentação ao usuário
+## Fase 12: Validação e Deploy
+- [ ] Executar validação contínua simulando produção
+- [ ] Testar failover e recuperação
+- [ ] Testar escalabilidade
+- [ ] Testar performance sob carga
+- [ ] Validar segurança
+- [ ] Criar checkpoint final
+- [ ] Deploy em produção
