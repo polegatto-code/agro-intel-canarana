@@ -111,3 +111,33 @@ temp/
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
+
+# Backups (keep migrations, but not db backups)
+backups/db_*.sql
+backups/.env_*.backup
+!backups/.gitkeep
+
+# Screenshots
+screenshots/
+
+# Sensitive data
+*.pem
+*.key
+*.crt
+secrets/
+
+# Keep important documentation
+!README.md
+!ARCHITECTURE.md
+!PROJECT_STATE.md
+!DATABASE_STATE.md
+!API_STATE.md
+!INFRA_STATE.md
+!TODO_MASTER.md
+!CHANGELOG.md
+!BACKUP_RESTORE.md
+!.env.example
+!docker-compose.yml
+!Dockerfile
+!scripts/
+!drizzle/schema.ts
