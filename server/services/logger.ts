@@ -11,6 +11,9 @@ export interface LogEntry {
   service: string;
   action: string;
   userId?: number;
+  requestId?: string;
+  executionId?: string;
+  correlationId?: string;
   duration?: number; // milliseconds
   status: 'pending' | 'success' | 'failed' | 'retry';
   message: string;
