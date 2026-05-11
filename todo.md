@@ -63,7 +63,7 @@
 - [x] Implementar logs estruturados com correlation IDs
 - [x] Adicionar request IDs e execution IDs
 - [x] Criar testes ponta a ponta automatizados
-- [ ] Adicionar monitoramento Prometheus-style
+- [x] Adicionar monitoramento Prometheus-style
 - [ ] Implementar graceful shutdown
 - [x] Criar Docker e docker-compose
 - [ ] Estruturar multi-tenant corretamente
