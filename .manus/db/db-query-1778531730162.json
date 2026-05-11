@@ -1,0 +1,59 @@
+{
+  "query": "SELECT TABLE_NAME, TABLE_TYPE, ENGINE, TABLE_ROWS, DATA_LENGTH FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 49eMgPq5cVu4Eag.root --database fBtCmWxANL94hcDMaWK3iH --execute SELECT TABLE_NAME, TABLE_TYPE, ENGINE, TABLE_ROWS, DATA_LENGTH FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "1",
+      "DATA_LENGTH": "16"
+    },
+    {
+      "TABLE_NAME": "marketAlerts",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "0",
+      "DATA_LENGTH": "0"
+    },
+    {
+      "TABLE_NAME": "marketAnalysisDaily",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "0",
+      "DATA_LENGTH": "0"
+    },
+    {
+      "TABLE_NAME": "notificationLogs",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "0",
+      "DATA_LENGTH": "0"
+    },
+    {
+      "TABLE_NAME": "scheduledJobs",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "0",
+      "DATA_LENGTH": "0"
+    },
+    {
+      "TABLE_NAME": "users",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "1",
+      "DATA_LENGTH": "40"
+    },
+    {
+      "TABLE_NAME": "weatherDailySummary",
+      "TABLE_TYPE": "BASE TABLE",
+      "ENGINE": "InnoDB",
+      "TABLE_ROWS": "0",
+      "DATA_LENGTH": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tTABLE_TYPE\tENGINE\tTABLE_ROWS\tDATA_LENGTH\n__drizzle_migrations\tBASE TABLE\tInnoDB\t1\t16\nmarketAlerts\tBASE TABLE\tInnoDB\t0\t0\nmarketAnalysisDaily\tBASE TABLE\tInnoDB\t0\t0\nnotificationLogs\tBASE TABLE\tInnoDB\t0\t0\nscheduledJobs\tBASE TABLE\tInnoDB\t0\t0\nusers\tBASE TABLE\tInnoDB\t1\t40\nweatherDailySummary\tBASE TABLE\tInnoDB\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1339
+}

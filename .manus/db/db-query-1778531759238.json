@@ -1,0 +1,31 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 49eMgPq5cVu4Eag.root --database fBtCmWxANL94hcDMaWK3iH --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "marketAlerts"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "marketAnalysisDaily"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "notificationLogs"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "scheduledJobs"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "users"
+    },
+    {
+      "Tables_in_fBtCmWxANL94hcDMaWK3iH": "weatherDailySummary"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_fBtCmWxANL94hcDMaWK3iH\n__drizzle_migrations\nmarketAlerts\nmarketAnalysisDaily\nnotificationLogs\nscheduledJobs\nusers\nweatherDailySummary\n",
+  "stderr": "",
+  "execution_time_ms": 621
+}

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS userSettings (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  telegramToken VARCHAR(255) NOT NULL,\n  telegramChatId VARCHAR(255) NOT NULL,\n  minHumidity INT NOT NULL DEFAULT 50,\n  maxHumidity INT NOT NULL DEFAULT 90,\n  maxTemperature INT NOT NULL DEFAULT 30,\n  maxWindSpeed INT NOT NULL DEFAULT 15,\n  monitoredCrops JSON NOT NULL,\n  marketAlertFrequency ENUM('daily','weekly') NOT NULL DEFAULT 'daily',\n  monitoredInputs JSON NOT NULL,\n  enableWeatherNotifications BOOLEAN NOT NULL DEFAULT true,\n  enableMarketNotifications BOOLEAN NOT NULL DEFAULT true,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 49eMgPq5cVu4Eag.root --database fBtCmWxANL94hcDMaWK3iH --execute CREATE TABLE IF NOT EXISTS userSettings (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  telegramToken VARCHAR(255) NOT NULL,\n  telegramChatId VARCHAR(255) NOT NULL,\n  minHumidity INT NOT NULL DEFAULT 50,\n  maxHumidity INT NOT NULL DEFAULT 90,\n  maxTemperature INT NOT NULL DEFAULT 30,\n  maxWindSpeed INT NOT NULL DEFAULT 15,\n  monitoredCrops JSON NOT NULL,\n  marketAlertFrequency ENUM('daily','weekly') NOT NULL DEFAULT 'daily',\n  monitoredInputs JSON NOT NULL,\n  enableWeatherNotifications BOOLEAN NOT NULL DEFAULT true,\n  enableMarketNotifications BOOLEAN NOT NULL DEFAULT true,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 668
+}
