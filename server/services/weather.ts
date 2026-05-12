@@ -277,7 +277,9 @@ export async function analyzeWeather(
   maxHumidity: number = 90,
   maxTemperature: number = 30,
   maxWindSpeed: number = 15,
-  apiKey?: string
+  apiKey?: string,
+  latitude: number = -7.5,
+  longitude: number = -51.5
 ): Promise<WeatherAnalysis> {
   logger.log({
     service: 'weather',
@@ -290,7 +292,7 @@ export async function analyzeWeather(
 
   try {
     // Fetch weather data
-    const weatherData = await fetchWeatherFromAPI(undefined, undefined, apiKey);
+    const weatherData = await fetchWeatherFromAPI(latitude, longitude, apiKey);
 
     // Parse into hourly forecast
     const hourlyForecast = parseWeatherData(
@@ -389,12 +391,14 @@ export async function analyzeWeather(
  */
 export async function saveWeatherAnalysis(
   userId: number,
-  analysis: WeatherAnalysis
+  analysis: WeatherAnalysis,
+  farmId?: number
 ): Promise<void> {
   try {
     // Save hourly log
     await db.createWeatherLog({
       userId,
+      farmId: farmId || 0,
       temperature: analysis.currentTemp.toString() as any,
       humidity: analysis.currentHumidity,
       windSpeed: analysis.currentWindSpeed.toString() as any,
@@ -418,6 +422,7 @@ export async function saveWeatherAnalysis(
 
     await db.createWeatherDailySummary({
       userId,
+      farmId: farmId || 0,
       summaryDate: today,
       minTemperature: minTemp.toString() as any,
       maxTemperature: maxTemp.toString() as any,

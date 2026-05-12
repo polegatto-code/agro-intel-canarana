@@ -99,23 +99,35 @@ class Scheduler {
       action: 'weather_check',
       level: 'info',
       status: 'pending',
-      message: 'Starting daily weather check for all users',
+      message: 'Starting daily weather check for all farms',
     });
 
     try {
       const users = await db.getAllUsersWithSettings();
+      let farmCount = 0;
       
       for (const user of users) {
         if (user.telegramToken && user.telegramChatId && user.enableWeatherNotifications) {
-          await executeWeatherCheckForUser(
-            user.userId,
-            user.telegramToken,
-            user.telegramChatId,
-            user.minHumidity || 50,
-            user.maxHumidity || 90,
-            user.maxTemperature || 30,
-            user.maxWindSpeed || 15
-          );
+          const farms = await db.getUserFarms(user.userId);
+          
+          for (const farm of farms) {
+            const farmSettings = await db.getUserSettings(user.userId);
+            if (!farmSettings) continue;
+            
+            await executeWeatherCheckForUser(
+              user.userId,
+              farm.id,
+              Number(farm.latitude),
+              Number(farm.longitude),
+              user.telegramToken,
+              user.telegramChatId,
+              farmSettings.minHumidity || 50,
+              farmSettings.maxHumidity || 90,
+              farmSettings.maxTemperature || 30,
+              farmSettings.maxWindSpeed || 15
+            );
+            farmCount++;
+          }
         }
       }
 
@@ -124,8 +136,8 @@ class Scheduler {
         action: 'weather_check',
         level: 'info',
         status: 'success',
-        message: 'Weather check completed for all users',
-        metadata: { userCount: users.length }
+        message: 'Weather check completed for all farms',
+        metadata: { userCount: users.length, farmCount }
       });
     } catch (error) {
       logger.log({
@@ -241,10 +253,13 @@ class Scheduler {
 export const scheduler = new Scheduler();
 
 /**
- * Execute weather check for a specific user
+ * Execute weather check for a specific user (legacy - iterates over farms)
  */
 export async function executeWeatherCheckForUser(
   userId: number,
+  farmId: number,
+  latitude: number,
+  longitude: number,
   telegramToken: string,
   telegramChatId: string,
   minHumidity: number = 50,
@@ -258,7 +273,8 @@ export async function executeWeatherCheckForUser(
     level: 'info',
     status: 'pending',
     userId,
-    message: 'Starting weather check job',
+    farmId,
+    message: 'Starting weather check job for farm',
   });
 
   try {
@@ -268,10 +284,12 @@ export async function executeWeatherCheckForUser(
       maxHumidity,
       maxTemperature,
       maxWindSpeed,
-      process.env.OPENWEATHER_API_KEY
+      process.env.OPENWEATHER_API_KEY,
+      latitude,
+      longitude
     );
 
-    await saveWeatherAnalysis(userId, analysis);
+    await saveWeatherAnalysis(userId, analysis, farmId);
 
     const message = formatWeatherMessage(analysis);
 
@@ -284,7 +302,8 @@ export async function executeWeatherCheckForUser(
       level: 'info',
       status: 'success',
       userId,
-      message: 'Weather check job completed successfully',
+      farmId,
+      message: 'Weather check job completed successfully for farm',
       metadata: { classification: analysis.overallClassification },
     });
   } catch (error) {
@@ -294,7 +313,8 @@ export async function executeWeatherCheckForUser(
       level: 'error',
       status: 'failed',
       userId,
-      message: 'Weather check job failed',
+      farmId,
+      message: 'Weather check job failed for farm',
       error: error instanceof Error ? error.message : String(error),
     });
 
