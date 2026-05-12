@@ -2,22 +2,23 @@ import { logger } from './logger';
 import * as db from '../db';
 import { cacheService, rateLimiter } from './cache';
 import { telegramService } from './telegram';
-import { cronJobService } from './cronJobs';
+import { scheduler } from './scheduler';
 import { openWeatherService } from './openweather';
 import { newsCollectorService } from './newsCollector';
 
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: Date;
-  checks: {
+    checks: {
     database: HealthCheckStatus;
     cache: HealthCheckStatus;
     telegram: HealthCheckStatus;
     weather: HealthCheckStatus;
     newsCollector: HealthCheckStatus;
-    cron: HealthCheckStatus;
+    scheduler: HealthCheckStatus;
     memory: HealthCheckStatus;
     rateLimiter: HealthCheckStatus;
+    ai: HealthCheckStatus;
   };
   summary: string;
 }
@@ -54,9 +55,10 @@ class HealthCheckService {
       telegram: this.checkTelegram(),
       weather: this.checkWeather(),
       newsCollector: this.checkNewsCollector(),
-      cron: this.checkCron(),
+      scheduler: this.checkScheduler(),
       memory: this.checkMemory(),
       rateLimiter: this.checkRateLimiter(),
+      ai: this.checkAI(),
     };
 
     const duration = Date.now() - startTime;
@@ -224,29 +226,55 @@ class HealthCheckService {
   }
 
   /**
-   * Check cron jobs
+   * Check scheduler status
    */
-  private checkCron(): HealthCheckStatus {
+  private checkScheduler(): HealthCheckStatus {
     try {
-      const status = cronJobService.getStatus();
+      const status = scheduler.getStatus();
 
       if (!status.isRunning) {
         return {
           status: 'warning',
-          message: 'Cron jobs not running',
+          message: 'Scheduler not running',
           details: status,
         };
       }
 
       return {
         status: 'ok',
-        message: 'Cron jobs operational',
+        message: 'Scheduler operational',
         details: status,
       };
     } catch (error) {
       return {
         status: 'error',
-        message: `Cron error: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Scheduler error: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  /**
+   * Check AI service status
+   */
+  private checkAI(): HealthCheckStatus {
+    try {
+      const hasApiKey = !!process.env.OPENAI_API_KEY;
+
+      if (!hasApiKey) {
+        return {
+          status: 'error',
+          message: 'AI API Key not configured',
+        };
+      }
+
+      return {
+        status: 'ok',
+        message: 'AI service configured',
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        message: `AI check error: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
