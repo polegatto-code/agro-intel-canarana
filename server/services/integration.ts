@@ -144,6 +144,7 @@ class IntegrationService {
    */
   async sendTelegramWithProtection(
     userId: number,
+    farmId: number,
     message: string,
     priority: 'low' | 'normal' | 'high' | 'critical' = 'normal',
     requestId: string
@@ -154,11 +155,11 @@ class IntegrationService {
     try {
       const result = await breaker.execute(async () => {
         return await telegramRetry.execute(async () => {
-          const settings = await db.getUserSettings(userId);
-          if (!settings?.telegramChatId) {
-            throw new Error('Telegram chat ID not configured');
+          const settings = await db.getUserSettings(userId, farmId);
+          if (!settings?.telegramChatId || !settings?.telegramToken) {
+            throw new Error('Telegram chat ID or Token not configured for this farm');
           }
-          return await telegramService.sendMessage(settings.telegramChatId, message, priority);
+          return await telegramService.sendMessage(settings.telegramToken, settings.telegramChatId, message, priority);
         });
       });
 
@@ -186,7 +187,9 @@ class IntegrationService {
         status: 'failed',
         message: 'Failed to send Telegram message',
         error: error instanceof Error ? error.message : String(error),
-        metadata: { userId, requestId, priority, duration },
+        userId,
+        farmId,
+        metadata: { requestId, priority, duration },
       });
 
       throw error;
