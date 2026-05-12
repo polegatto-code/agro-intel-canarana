@@ -57,19 +57,21 @@ Com dados isolados por fazenda, consolidar a automação. A base já tem `schedu
 | Anti-spam Telegram | Deduplicação e rate limit por usuário/fazenda/prioridade. | Sem mensagens duplicadas em retry. |
 | Métricas úteis | Métricas por serviço e status de API externa. | Prometheus mostra falhas e latência. |
 
-## Fase 3 — Clima agronômico avançado
+## Fase 3 — Motor Agronômico Operacional Autônomo (Fase 7 Concluída)
 
-Quando o fluxo climático por fazenda estiver confiável, expandir a inteligência agronômica. O serviço atual já classifica janela de aplicação e condições por hora; a evolução natural é enriquecer a análise sem quebrar os contratos existentes.
+A Fase 7 implementou os motores de inteligência. A próxima etapa é a integração e ativação.
 
-| Feature | Valor | Dependências |
+| Feature | Estado | Descrição |
 |---|---|---|
-| ET e VPD | Melhor decisão de irrigação, estresse hídrico e pulverização. | Clima histórico confiável por fazenda. |
-| Risco de doenças | Alertas por cultura e condição climática. | Cultura principal e janela agrícola corretas. |
-| Pulverização otimizada | Recomendação de melhores horários por produto/cultura. | Thresholds por fazenda e forecast confiável. |
-| Histórico por talhão | Maior granularidade dentro da fazenda. | Modelo de talhões, ainda não implementado. |
-| Mapa climático | Visualização geoespacial das fazendas. | Coordenadas validadas e UI multi-fazenda. |
+| Perfis Operacionais | ✅ Implementado | 10 perfis e calendário sazonal regional. |
+| Revalidação Inteligente | ✅ Implementado | Schedule adaptativo e anti-spam. |
+| Consenso Multi-API | ✅ Implementado | Arquitetura para 6 fontes (OpenWeather ativo). |
+| Inteligência de Mercado | ✅ Implementado | Interpretação de impacto para 12 categorias. |
+| Integração e Ativação | ⏳ Pendente | Integrar motores no `scheduler.ts` e ativar bootstrap. |
 
-## Fase 4 — Inteligência comercial
+## Fase 4 — Clima agronômico avançado (Futuro)
+
+## Fase 5 — Inteligência comercial avançada
 
 O fluxo de mercado atual monitora notícias e gera análise. A expansão deve começar por definir se alertas são globais por usuário ou por fazenda/cultura. Depois, integrar fontes estruturadas e indicadores.
 
@@ -81,7 +83,7 @@ O fluxo de mercado atual monitora notícias e gera análise. A expansão deve co
 | Frete | Impacto regional na margem. | Dados locais podem ser difíceis; documentar fonte. |
 | Margem operacional | Cruzar preço, insumo e produtividade. | Requer modelo de custos por fazenda. |
 
-## Fase 5 — IA interpretativa
+## Fase 6 — IA interpretativa avançada
 
 A IA deve ser introduzida como camada interpretativa sobre dados confiáveis, não como substituta de persistência, regras e validação. O projeto já prevê análise de notícias e mensagens; a evolução pode incluir sumários diários e recomendações, sempre com rastreabilidade de dados usados.
 
