@@ -165,6 +165,113 @@ export const appRouter = router({
   }),
 
   // ============================================================================
+  // FARMS PROCEDURES
+  // ============================================================================
+  farms: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserFarms(ctx.user.id);
+    }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const farm = await db.getFarmById(input.id);
+        if (!farm || farm.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Farm not found',
+          });
+        }
+        return farm;
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(255),
+        municipio: z.string().min(1).max(255),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        altitude: z.number().optional(),
+        mainCrop: z.string().min(1).max(64),
+        agriculturalWindowStart: z.number().min(1).max(12).optional(),
+        agriculturalWindowEnd: z.number().min(1).max(12).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const farm = await db.createFarm({
+          userId: ctx.user.id,
+          ...input,
+        });
+        if (!farm) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to create farm',
+          });
+        }
+        return farm;
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(255).optional(),
+        municipio: z.string().min(1).max(255).optional(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
+        altitude: z.number().optional(),
+        mainCrop: z.string().min(1).max(64).optional(),
+        agriculturalWindowStart: z.number().min(1).max(12).optional(),
+        agriculturalWindowEnd: z.number().min(1).max(12).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const farm = await db.getFarmById(input.id);
+        if (!farm || farm.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Farm not found',
+          });
+        }
+        const { id, ...updates } = input;
+        const updated = await db.updateFarm(id, updates);
+        return updated;
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const farm = await db.getFarmById(input.id);
+        if (!farm || farm.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Farm not found',
+          });
+        }
+        await db.deleteFarm(input.id);
+        return { success: true };
+      }),
+
+    selectActive: protectedProcedure
+      .input(z.object({ farmId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const farm = await db.getFarmById(input.farmId);
+        if (!farm) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Farm not found',
+          });
+        }
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === input.farmId)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have access to this farm',
+          });
+        }
+        await db.updateUser(ctx.user.id, { currentFarmId: input.farmId });
+        return { success: true };
+      }),
+  }),
+
+  // ============================================================================
   // NOTIFICATION HISTORY PROCEDURES
   // ============================================================================
   notifications: router({

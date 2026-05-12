@@ -10,13 +10,19 @@ import {
   marketAnalysisDaily,
   notificationLogs,
   scheduledJobs,
+  farms,
+  farmUsers,
   UserSettings,
   WeatherLog,
   WeatherDailySummary,
   MarketAlert,
   MarketAnalysisDaily,
   NotificationLog,
-  ScheduledJob
+  ScheduledJob,
+  Farm,
+  FarmUser,
+  InsertFarm,
+  InsertFarmUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -422,3 +428,187 @@ export async function getAllUsersWithSettings() {
   }
 }
 
+
+
+/**
+ * ========== FARMS CRUD ==========
+ */
+
+export async function createFarm(farm: InsertFarm): Promise<Farm | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[Database] Cannot create farm: database not available');
+    return null;
+  }
+
+  try {
+    const result = await db.insert(farms).values(farm);
+    const insertedId = result[0].insertId;
+    
+    // Retrieve the created farm
+    const created = await db
+      .select()
+      .from(farms)
+      .where(eq(farms.id, Number(insertedId)))
+      .limit(1);
+    
+    return created.length > 0 ? created[0] : null;
+  } catch (error) {
+    console.error('[Database] Failed to create farm:', error);
+    throw error;
+  }
+}
+
+export async function getFarmById(farmId: number): Promise<Farm | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(farms)
+      .where(eq(farms.id, farmId))
+      .limit(1);
+    
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('[Database] Failed to get farm:', error);
+    return null;
+  }
+}
+
+export async function getFarmsByUserId(userId: number): Promise<Farm[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select()
+      .from(farms)
+      .where(eq(farms.userId, userId))
+      .orderBy(farms.createdAt);
+  } catch (error) {
+    console.error('[Database] Failed to get farms by user:', error);
+    return [];
+  }
+}
+
+export async function updateFarm(farmId: number, updates: Partial<Omit<Farm, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Farm | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    await db
+      .update(farms)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(farms.id, farmId));
+    
+    return getFarmById(farmId);
+  } catch (error) {
+    console.error('[Database] Failed to update farm:', error);
+    throw error;
+  }
+}
+
+export async function deleteFarm(farmId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    // Delete all farm_users entries first
+    await db.delete(farmUsers).where(eq(farmUsers.farmId, farmId));
+    
+    // Delete the farm
+    await db.delete(farms).where(eq(farms.id, farmId));
+    
+    return true;
+  } catch (error) {
+    console.error('[Database] Failed to delete farm:', error);
+    throw error;
+  }
+}
+
+/**
+ * ========== FARM USERS CRUD ==========
+ */
+
+export async function addUserToFarm(farmId: number, userId: number, role: 'owner' | 'manager' | 'viewer' = 'viewer'): Promise<FarmUser | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db.insert(farmUsers).values({ farmId, userId, role });
+    const insertedId = result[0].insertId;
+    
+    const created = await db
+      .select()
+      .from(farmUsers)
+      .where(eq(farmUsers.id, Number(insertedId)))
+      .limit(1);
+    
+    return created.length > 0 ? created[0] : null;
+  } catch (error) {
+    console.error('[Database] Failed to add user to farm:', error);
+    throw error;
+  }
+}
+
+export async function removeUserFromFarm(farmId: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  try {
+    await db.delete(farmUsers).where(
+      and(eq(farmUsers.farmId, farmId), eq(farmUsers.userId, userId))
+    );
+    return true;
+  } catch (error) {
+    console.error('[Database] Failed to remove user from farm:', error);
+    throw error;
+  }
+}
+
+export async function getFarmUsersForFarm(farmId: number): Promise<FarmUser[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select()
+      .from(farmUsers)
+      .where(eq(farmUsers.farmId, farmId));
+  } catch (error) {
+    console.error('[Database] Failed to get farm users:', error);
+    return [];
+  }
+}
+
+export async function getUserFarms(userId: number): Promise<Farm[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Get farms where user is owner
+    const ownedFarms = await db
+      .select()
+      .from(farms)
+      .where(eq(farms.userId, userId));
+    
+    // Get farms where user is added via farm_users
+    const sharedFarms = await db
+      .select({ farm: farms })
+      .from(farmUsers)
+      .innerJoin(farms, eq(farmUsers.farmId, farms.id))
+      .where(eq(farmUsers.userId, userId))
+      .then(results => results.map(r => r.farm));
+    
+    // Combine and deduplicate
+    const allFarms = [...ownedFarms, ...sharedFarms];
+    const uniqueFarms = Array.from(new Map(allFarms.map(f => [f.id, f])).values());
+    
+    return uniqueFarms.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  } catch (error) {
+    console.error('[Database] Failed to get user farms:', error);
+    return [];
+  }
+}
