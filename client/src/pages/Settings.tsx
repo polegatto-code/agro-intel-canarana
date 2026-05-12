@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { skipToken } from "@/lib/skipToken";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,9 @@ import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Settings, Bell, Thermometer, Wind, Droplets, Wheat, FlaskConical, Send } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useFarms } from "@/_core/hooks/useFarms";
+
 
 const AVAILABLE_CROPS = [
   { value: "soja", label: "Soja" },
@@ -47,10 +50,14 @@ const AVAILABLE_INPUTS = [
 
 export default function SettingsPage() {
   const { isAuthenticated, loading } = useAuth();
+  const { activeFarm } = useFarms();
 
-  const settingsQuery = trpc.settings.get.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const settingsQuery = trpc.settings.get.useQuery(
+    activeFarm ? { farmId: activeFarm.id } : skipToken,
+    {
+      enabled: isAuthenticated && !!activeFarm,
+    }
+  );
 
   const updateMutation = trpc.settings.update.useMutation({
     onSuccess: () => {
@@ -106,7 +113,12 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    if (!activeFarm) {
+      toast.error("Nenhuma fazenda selecionada");
+      return;
+    }
     updateMutation.mutate({
+      farmId: activeFarm.id,
       telegramToken,
       telegramChatId,
       minHumidity,

@@ -36,26 +36,44 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
 
-      // Bootstrap automático: cria userSettings com defaults para novos usuários
+      // Bootstrap automático: cria farm padrão e userSettings com defaults para novos usuários
       try {
         const user = await db.getUserByOpenId(userInfo.openId);
         if (user) {
-          const existingSettings = await db.getUserSettings(user.id);
-          if (!existingSettings) {
-            await db.upsertUserSettings(user.id, {
-              telegramToken: '',
-              telegramChatId: '',
-              minHumidity: 50,
-              maxHumidity: 90,
-              maxTemperature: 30,
-              maxWindSpeed: 15,
-              monitoredCrops: ['soja', 'milho'],
-              monitoredInputs: ['ureia', 'map', 'kcl', 'super-simples', 'super-triplo'],
-              marketAlertFrequency: 'daily',
-              enableWeatherNotifications: true,
-              enableMarketNotifications: true,
+          // Criar fazenda padrão se não existir
+          const userFarms = await db.getUserFarms(user.id);
+          let defaultFarm = userFarms.length > 0 ? userFarms[0] : null;
+          
+          if (!defaultFarm) {
+            defaultFarm = await db.createFarm({
+              userId: user.id,
+              name: 'Fazenda Padrão',
+              municipio: 'Canarana',
+              latitude: '-13.5',
+              longitude: '-52.2',
+              mainCrop: 'soja',
             });
-            console.info('[OAuth] Bootstrap: userSettings criado para novo usuário', user.id);
+            console.info('[OAuth] Bootstrap: Farm padrão criado para novo usuário', user.id);
+          }
+          
+          if (defaultFarm) {
+            const existingSettings = await db.getUserSettings(user.id, defaultFarm.id);
+            if (!existingSettings) {
+              await db.upsertUserSettings(user.id, defaultFarm.id, {
+                telegramToken: '',
+                telegramChatId: '',
+                minHumidity: 50,
+                maxHumidity: 90,
+                maxTemperature: 30,
+                maxWindSpeed: 15,
+                monitoredCrops: ['soja', 'milho'],
+                monitoredInputs: ['ureia', 'map', 'kcl', 'super-simples', 'super-triplo'],
+                marketAlertFrequency: 'daily',
+                enableWeatherNotifications: true,
+                enableMarketNotifications: true,
+              });
+              console.info('[OAuth] Bootstrap: userSettings criado para novo usuário', user.id, 'farm', defaultFarm.id);
+            }
           }
         }
       } catch (bootstrapError) {

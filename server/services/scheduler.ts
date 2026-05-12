@@ -183,9 +183,10 @@ class Scheduler {
       const users = await db.getAllUsersWithSettings();
       
       for (const user of users) {
-        if (user.telegramToken && user.telegramChatId && user.enableMarketNotifications) {
+        if (user.telegramToken && user.telegramChatId && user.enableMarketNotifications && user.farmId) {
           await executeMarketAnalysisForUser(
             user.userId,
+            user.farmId,
             user.telegramToken,
             user.telegramChatId
           );
@@ -370,6 +371,7 @@ function formatWeatherMessage(analysis: any): string {
  */
 export async function executeMarketAnalysisForUser(
   userId: number,
+  farmId: number,
   telegramToken: string,
   telegramChatId: string
 ): Promise<void> {
@@ -397,7 +399,7 @@ export async function executeMarketAnalysisForUser(
       return;
     }
 
-    await newsCollectorService.saveNewsToDatabase(userId, rawNews);
+    await newsCollectorService.saveNewsToDatabase(userId, farmId, rawNews);
 
     const analysis = await newsAnalysisService.analyzeNews(rawNews);
 

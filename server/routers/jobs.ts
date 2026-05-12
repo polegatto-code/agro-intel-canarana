@@ -24,15 +24,26 @@ export const jobsRouter = router({
     });
 
     try {
-      // Get user settings
-      const settings = await db.getUserSettings(ctx.user.id);
+      // Get user farms
+      const farms = await db.getUserFarms(ctx.user.id);
+      if (farms.length === 0) {
+        throw new Error('No farms found for user');
+      }
+      
+      const farm = farms[0];
+      
+      // Get user settings for this farm
+      const settings = await db.getUserSettings(ctx.user.id, farm.id);
       if (!settings) {
-        throw new Error('User settings not found');
+        throw new Error('User settings not found for this farm');
       }
 
       // Execute weather check
       await executeWeatherCheckForUser(
         ctx.user.id,
+        farm.id,
+        parseFloat(farm.latitude || '0'),
+        parseFloat(farm.longitude || '0'),
         settings.telegramToken,
         settings.telegramChatId,
         settings.minHumidity,
@@ -74,15 +85,24 @@ export const jobsRouter = router({
     });
 
     try {
-      // Get user settings
-      const settings = await db.getUserSettings(ctx.user.id);
+      // Get user farms
+      const farms = await db.getUserFarms(ctx.user.id);
+      if (farms.length === 0) {
+        throw new Error('No farms found for user');
+      }
+      
+      const farm = farms[0];
+      
+      // Get user settings for this farm
+      const settings = await db.getUserSettings(ctx.user.id, farm.id);
       if (!settings) {
-        throw new Error('User settings not found');
+        throw new Error('User settings not found for this farm');
       }
 
       // Execute market analysis
       await executeMarketAnalysisForUser(
         ctx.user.id,
+        farm.id,
         settings.telegramToken,
         settings.telegramChatId
       );

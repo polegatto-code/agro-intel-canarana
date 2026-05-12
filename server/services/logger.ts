@@ -11,6 +11,7 @@ export interface LogEntry {
   service: string;
   action: string;
   userId?: number;
+  farmId?: number;
   requestId?: string;
   executionId?: string;
   correlationId?: string;

@@ -112,37 +112,70 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateUser(userId: number, updates: Partial<Omit<InsertUser, 'openId'>>) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update user: database not available");
+    return undefined;
+  }
+
+  try {
+    await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    
+    return db.select().from(users).where(eq(users.id, userId)).limit(1);
+  } catch (error) {
+    console.error("[Database] Failed to update user:", error);
+    throw error;
+  }
+}
+
 // ============================================================================
 // USER SETTINGS QUERIES
 // ============================================================================
 
-export async function getUserSettings(userId: number): Promise<UserSettings | undefined> {
+export async function getUserSettings(userId: number, farmId?: number): Promise<UserSettings | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db
+  let query = db
     .select()
     .from(userSettings)
-    .where(eq(userSettings.userId, userId))
-    .limit(1);
+    .where(eq(userSettings.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(userSettings)
+      .where(and(eq(userSettings.userId, userId), eq(userSettings.farmId, farmId)));
+  }
+
+  const result = await query.limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function upsertUserSettings(userId: number, settings: Partial<Omit<UserSettings, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) {
+export async function upsertUserSettings(userId: number, farmId: number, settings: Partial<Omit<UserSettings, 'id' | 'userId' | 'farmId' | 'createdAt' | 'updatedAt'>>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const existing = await getUserSettings(userId);
+  const existing = await db
+    .select()
+    .from(userSettings)
+    .where(and(eq(userSettings.userId, userId), eq(userSettings.farmId, farmId)))
+    .limit(1);
 
-  if (existing) {
+  if (existing.length > 0) {
     return db
       .update(userSettings)
       .set({ ...settings, updatedAt: new Date() })
-      .where(eq(userSettings.userId, userId));
+      .where(and(eq(userSettings.userId, userId), eq(userSettings.farmId, farmId)));
   } else {
     return db.insert(userSettings).values({
       userId,
+      farmId,
       telegramToken: settings.telegramToken || '',
       telegramChatId: settings.telegramChatId || '',
       minHumidity: settings.minHumidity ?? 50,
@@ -162,14 +195,23 @@ export async function upsertUserSettings(userId: number, settings: Partial<Omit<
 // WEATHER LOGS QUERIES
 // ============================================================================
 
-export async function getLatestWeatherLog(userId: number): Promise<WeatherLog | undefined> {
+export async function getLatestWeatherLog(userId: number, farmId?: number): Promise<WeatherLog | undefined> {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db
+  let query = db
     .select()
     .from(weatherLogs)
-    .where(eq(weatherLogs.userId, userId))
+    .where(eq(weatherLogs.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(weatherLogs)
+      .where(and(eq(weatherLogs.userId, userId), eq(weatherLogs.farmId, farmId)));
+  }
+
+  const result = await query
     .orderBy(desc(weatherLogs.createdAt))
     .limit(1);
 
@@ -183,15 +225,23 @@ export async function createWeatherLog(log: Omit<WeatherLog, 'id' | 'createdAt'>
   return db.insert(weatherLogs).values(log);
 }
 
-export async function getWeatherHistory(userId: number, days: number = 7) {
+export async function getWeatherHistory(userId: number, farmId?: number, days: number = 7) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  let query = db
     .select()
     .from(weatherLogs)
-    .where(eq(weatherLogs.userId, userId))
-    .orderBy(desc(weatherLogs.createdAt));
+    .where(eq(weatherLogs.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(weatherLogs)
+      .where(and(eq(weatherLogs.userId, userId), eq(weatherLogs.farmId, farmId)));
+  }
+
+  return query.orderBy(desc(weatherLogs.createdAt));
 }
 
 // ============================================================================
@@ -205,14 +255,23 @@ export async function createMarketAlert(alert: Omit<MarketAlert, 'id' | 'created
   return db.insert(marketAlerts).values(alert);
 }
 
-export async function getMarketAlerts(userId: number, limit: number = 10) {
+export async function getMarketAlerts(userId: number, farmId?: number, limit: number = 10) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  let query = db
     .select()
     .from(marketAlerts)
-    .where(eq(marketAlerts.userId, userId))
+    .where(eq(marketAlerts.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(marketAlerts)
+      .where(and(eq(marketAlerts.userId, userId), eq(marketAlerts.farmId, farmId)));
+  }
+
+  return query
     .orderBy(desc(marketAlerts.createdAt))
     .limit(limit);
 }
@@ -238,14 +297,23 @@ export async function createNotificationLog(log: Omit<NotificationLog, 'id' | 'c
   return db.insert(notificationLogs).values(log);
 }
 
-export async function getNotificationHistory(userId: number, limit: number = 20) {
+export async function getNotificationHistory(userId: number, farmId?: number, limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  let query = db
     .select()
     .from(notificationLogs)
-    .where(eq(notificationLogs.userId, userId))
+    .where(eq(notificationLogs.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(notificationLogs)
+      .where(and(eq(notificationLogs.userId, userId), eq(notificationLogs.farmId, farmId)));
+  }
+
+  return query
     .orderBy(desc(notificationLogs.createdAt))
     .limit(limit);
 }
@@ -264,7 +332,7 @@ export async function updateNotificationLog(logId: number, updates: Partial<Omit
 // SCHEDULED JOBS QUERIES
 // ============================================================================
 
-export async function getOrCreateScheduledJob(userId: number, jobType: 'weather_check' | 'market_analysis'): Promise<ScheduledJob> {
+export async function getOrCreateScheduledJob(userId: number, farmId: number, jobType: 'weather_check' | 'market_analysis'): Promise<ScheduledJob> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -273,6 +341,7 @@ export async function getOrCreateScheduledJob(userId: number, jobType: 'weather_
     .from(scheduledJobs)
     .where(and(
       eq(scheduledJobs.userId, userId),
+      eq(scheduledJobs.farmId, farmId),
       eq(scheduledJobs.jobType, jobType)
     ))
     .limit(1);
@@ -284,6 +353,7 @@ export async function getOrCreateScheduledJob(userId: number, jobType: 'weather_
   // Create new job
   const result = await db.insert(scheduledJobs).values({
     userId,
+    farmId,
     jobType,
     isEnabled: true,
     lastExecutionStatus: 'pending',
@@ -295,6 +365,7 @@ export async function getOrCreateScheduledJob(userId: number, jobType: 'weather_
     .from(scheduledJobs)
     .where(and(
       eq(scheduledJobs.userId, userId),
+      eq(scheduledJobs.farmId, farmId),
       eq(scheduledJobs.jobType, jobType)
     ))
     .limit(1);
@@ -323,7 +394,7 @@ export async function createWeatherDailySummary(summary: Omit<WeatherDailySummar
   return db.insert(weatherDailySummary).values(summary);
 }
 
-export async function getWeatherDailySummary(userId: number, date: Date) {
+export async function getWeatherDailySummary(userId: number, farmId: number, date: Date) {
   const db = await getDb();
   if (!db) return undefined;
 
@@ -338,6 +409,7 @@ export async function getWeatherDailySummary(userId: number, date: Date) {
     .from(weatherDailySummary)
     .where(and(
       eq(weatherDailySummary.userId, userId),
+      eq(weatherDailySummary.farmId, farmId),
     ))
     .limit(1);
 
@@ -355,29 +427,46 @@ export async function createMarketAnalysisDaily(analysis: Omit<MarketAnalysisDai
   return db.insert(marketAnalysisDaily).values(analysis);
 }
 
-export async function getLatestMarketAnalysis(userId: number) {
+export async function getLatestMarketAnalysis(userId: number, farmId?: number) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db
+  let query = db
     .select()
     .from(marketAnalysisDaily)
-    .where(eq(marketAnalysisDaily.userId, userId))
+    .where(eq(marketAnalysisDaily.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(marketAnalysisDaily)
+      .where(and(eq(marketAnalysisDaily.userId, userId), eq(marketAnalysisDaily.farmId, farmId)));
+  }
+
+  const result = await query
     .orderBy(desc(marketAnalysisDaily.createdAt))
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getMarketAnalysisHistory(userId: number, days: number = 7) {
+export async function getMarketAnalysisHistory(userId: number, farmId?: number, days: number = 7) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  let query = db
     .select()
     .from(marketAnalysisDaily)
-    .where(eq(marketAnalysisDaily.userId, userId))
-    .orderBy(desc(marketAnalysisDaily.createdAt));
+    .where(eq(marketAnalysisDaily.userId, userId));
+
+  if (farmId !== undefined) {
+    query = db
+      .select()
+      .from(marketAnalysisDaily)
+      .where(and(eq(marketAnalysisDaily.userId, userId), eq(marketAnalysisDaily.farmId, farmId)));
+  }
+
+  return query.orderBy(desc(marketAnalysisDaily.createdAt));
 }
 
 export async function updateMarketAnalysisDaily(analysisId: number, updates: Partial<Omit<MarketAnalysisDaily, 'id' | 'createdAt'>>) {
@@ -408,6 +497,7 @@ export async function getAllUsersWithSettings() {
         openId: users.openId,
         name: users.name,
         email: users.email,
+        farmId: userSettings.farmId,
         telegramToken: userSettings.telegramToken,
         telegramChatId: userSettings.telegramChatId,
         minHumidity: userSettings.minHumidity,
@@ -654,47 +744,12 @@ export async function getLatestWeatherByFarm(farmId: number): Promise<WeatherLog
       .select()
       .from(weatherLogs)
       .where(eq(weatherLogs.farmId, farmId))
-      .orderBy(desc(weatherLogs.recordedAt))
+      .orderBy(desc(weatherLogs.createdAt))
       .limit(1);
-    
+
     return result.length > 0 ? result[0] : null;
   } catch (error) {
     console.error('[Database] Failed to get latest weather by farm:', error);
     return null;
-  }
-}
-
-export async function getWeatherHistoryByFarm(farmId: number, days: number = 7): Promise<WeatherLog[]> {
-  const db = await getDb();
-  if (!db) return [];
-
-  try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    return await db
-      .select()
-      .from(weatherLogs)
-      .where(and(eq(weatherLogs.farmId, farmId)))
-      .orderBy(desc(weatherLogs.recordedAt));
-  } catch (error) {
-    console.error('[Database] Failed to get weather history by farm:', error);
-    return [];
-  }
-}
-
-export async function getWeatherDailySummaryByFarm(farmId: number, days: number = 7): Promise<WeatherDailySummary[]> {
-  const db = await getDb();
-  if (!db) return [];
-
-  try {
-    return await db
-      .select()
-      .from(weatherDailySummary)
-      .where(eq(weatherDailySummary.farmId, farmId))
-      .orderBy(desc(weatherDailySummary.summaryDate));
-  } catch (error) {
-    console.error('[Database] Failed to get weather daily summary by farm:', error);
-    return [];
   }
 }

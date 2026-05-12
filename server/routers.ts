@@ -25,19 +25,24 @@ export const appRouter = router({
   // SETTINGS PROCEDURES
   // ============================================================================
   settings: router({
-    get: protectedProcedure.query(async ({ ctx }) => {
-      const settings = await db.getUserSettings(ctx.user.id);
-      if (!settings) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User settings not found',
-        });
-      }
-      return settings;
-    }),
+    get: protectedProcedure
+      .input(z.object({
+        farmId: z.number(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const settings = await db.getUserSettings(ctx.user.id, input.farmId);
+        if (!settings) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User settings not found for this farm',
+          });
+        }
+        return settings;
+      }),
 
     update: protectedProcedure
       .input(z.object({
+        farmId: z.number(),
         telegramToken: z.string().optional(),
         telegramChatId: z.string().optional(),
         minHumidity: z.number().min(0).max(100).optional(),
@@ -51,7 +56,8 @@ export const appRouter = router({
         enableMarketNotifications: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await db.upsertUserSettings(ctx.user.id, input);
+        const { farmId, ...settings } = input;
+        await db.upsertUserSettings(ctx.user.id, farmId, settings);
         return { success: true };
       }),
   }),
@@ -70,10 +76,11 @@ export const appRouter = router({
 
     getHistory: protectedProcedure
       .input(z.object({
+        farmId: z.number(),
         days: z.number().min(1).max(30).default(7),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getWeatherHistory(ctx.user.id, input.days);
+        return db.getWeatherHistory(ctx.user.id, input.farmId, input.days);
       }),
 
     // This is called by the scheduled job (internal)
@@ -119,14 +126,16 @@ export const appRouter = router({
   marketAlerts: router({
     list: protectedProcedure
       .input(z.object({
+        farmId: z.number(),
         limit: z.number().min(1).max(50).default(10),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getMarketAlerts(ctx.user.id, input.limit);
+        return db.getMarketAlerts(ctx.user.id, input.farmId, input.limit);
       }),
 
     create: protectedProcedure
       .input(z.object({
+        farmId: z.number(),
         title: z.string(),
         summary: z.string(),
         aiAnalysis: z.string().optional(),
@@ -139,6 +148,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.createMarketAlert({
           userId: ctx.user.id,
+          farmId: input.farmId,
           title: input.title,
           summary: input.summary,
           aiAnalysis: input.aiAnalysis || null,
@@ -191,9 +201,9 @@ export const appRouter = router({
       .input(z.object({
         name: z.string().min(1).max(255),
         municipio: z.string().min(1).max(255),
-        latitude: z.number().min(-90).max(90),
-        longitude: z.number().min(-180).max(180),
-        altitude: z.number().optional(),
+        latitude: z.string().or(z.number()).transform(String),
+        longitude: z.string().or(z.number()).transform(String),
+        altitude: z.string().or(z.number()).optional().transform(v => v ? String(v) : undefined),
         mainCrop: z.string().min(1).max(64),
         agriculturalWindowStart: z.number().min(1).max(12).optional(),
         agriculturalWindowEnd: z.number().min(1).max(12).optional(),
@@ -217,9 +227,9 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().min(1).max(255).optional(),
         municipio: z.string().min(1).max(255).optional(),
-        latitude: z.number().min(-90).max(90).optional(),
-        longitude: z.number().min(-180).max(180).optional(),
-        altitude: z.number().optional(),
+        latitude: z.string().or(z.number()).optional().transform(v => v ? String(v) : undefined),
+        longitude: z.string().or(z.number()).optional().transform(v => v ? String(v) : undefined),
+        altitude: z.string().or(z.number()).optional().transform(v => v ? String(v) : undefined),
         mainCrop: z.string().min(1).max(64).optional(),
         agriculturalWindowStart: z.number().min(1).max(12).optional(),
         agriculturalWindowEnd: z.number().min(1).max(12).optional(),

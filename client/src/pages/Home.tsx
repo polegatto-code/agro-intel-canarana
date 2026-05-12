@@ -1,10 +1,18 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { skipToken } from "@/lib/skipToken";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Cloud, Droplets, Wind, TrendingUp, Calendar, Bell } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useFarms } from "@/_core/hooks/useFarms";
+
+
+/**
+ * Dashboard Principal - AgroIntel Canarana
+ * Exibe condições climáticas, janela de aplicação e alertas de mercado
+ */
 
 /**
  * Dashboard Principal - AgroIntel Canarana
@@ -14,18 +22,24 @@ export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Get active farm
+  const { activeFarm } = useFarms();
+
   // Queries
   const weatherQuery = trpc.weather.getCurrent.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  const settingsQuery = trpc.settings.get.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const settingsQuery = trpc.settings.get.useQuery(
+    activeFarm ? { farmId: activeFarm.id } : skipToken,
+    {
+      enabled: isAuthenticated && !!activeFarm,
+    }
+  );
 
   const alertsQuery = trpc.marketAlerts.list.useQuery(
-    { limit: 3 },
-    { enabled: isAuthenticated }
+    activeFarm ? { farmId: activeFarm.id, limit: 3 } : skipToken,
+    { enabled: isAuthenticated && !!activeFarm }
   );
 
   // Update current time

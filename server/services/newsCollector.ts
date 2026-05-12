@@ -198,19 +198,20 @@ class NewsCollectorService {
   /**
    * Save news to database
    */
-  async saveNewsToDatabase(userId: number, news: RawNewsItem[]): Promise<void> {
+  async saveNewsToDatabase(userId: number, farmId: number, news: RawNewsItem[]): Promise<void> {
     if (news.length === 0) return;
 
     try {
       for (const item of news) {
         // Check if alert already exists to avoid duplicates in DB
-        const existing = await db.getMarketAlerts(userId, 50);
+        const existing = await db.getMarketAlerts(userId, farmId, 50);
         const isDuplicate = existing.some(a => a.title === item.title && a.source === item.source);
         
         if (isDuplicate) continue;
 
         await db.createMarketAlert({
           userId,
+          farmId,
           title: item.title,
           summary: item.summary,
           affectedInputs: [],

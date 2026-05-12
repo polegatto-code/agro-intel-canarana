@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { skipToken } from "@/lib/skipToken";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/chart";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useFarms } from "@/_core/hooks/useFarms";
+
 import {
   Area,
   AreaChart,
@@ -92,16 +95,17 @@ const weatherChartConfig: ChartConfig = {
 
 export default function HistoryPage() {
   const { isAuthenticated, loading } = useAuth();
+  const { activeFarm } = useFarms();
   const [weatherDays, setWeatherDays] = useState<number>(7);
 
   const weatherQuery = trpc.weather.getHistory.useQuery(
-    { days: weatherDays },
-    { enabled: isAuthenticated }
+    activeFarm ? { farmId: activeFarm.id, days: weatherDays } : skipToken,
+    { enabled: isAuthenticated && !!activeFarm }
   );
 
   const alertsQuery = trpc.marketAlerts.list.useQuery(
-    { limit: 50 },
-    { enabled: isAuthenticated }
+    activeFarm ? { farmId: activeFarm.id, limit: 50 } : skipToken,
+    { enabled: isAuthenticated && !!activeFarm }
   );
 
   const notificationsQuery = trpc.notifications.getHistory.useQuery(

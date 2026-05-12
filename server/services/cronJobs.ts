@@ -85,17 +85,24 @@ class CronJobService {
       for (const user of users) {
         try {
           // Check if user has telegram configured
-          if (user.telegramToken && user.telegramChatId && user.enableWeatherNotifications) {
-            await executeWeatherCheckForUser(
-              user.userId,
-              user.telegramToken,
-              user.telegramChatId,
-              user.minHumidity || 50,
-              user.maxHumidity || 90,
-              user.maxTemperature || 30,
-              user.maxWindSpeed || 15
-            );
-            successCount++;
+          if (user.telegramToken && user.telegramChatId && user.enableWeatherNotifications && user.farmId) {
+            // Fetch farm to get coordinates
+            const farm = await db.getFarmById(user.farmId);
+            if (farm) {
+              await executeWeatherCheckForUser(
+                user.userId,
+                user.farmId,
+                parseFloat(farm.latitude || '0'),
+                parseFloat(farm.longitude || '0'),
+                user.telegramToken,
+                user.telegramChatId,
+                user.minHumidity || 50,
+                user.maxHumidity || 90,
+                user.maxTemperature || 30,
+                user.maxWindSpeed || 15
+              );
+              successCount++;
+            }
           }
         } catch (error) {
           failureCount++;
@@ -153,9 +160,10 @@ class CronJobService {
       for (const user of users) {
         try {
           // Check if user has telegram configured
-          if (user.telegramToken && user.telegramChatId && user.enableMarketNotifications) {
+          if (user.telegramToken && user.telegramChatId && user.enableMarketNotifications && user.farmId) {
             await executeMarketAnalysisForUser(
               user.userId,
+              user.farmId,
               user.telegramToken,
               user.telegramChatId
             );
