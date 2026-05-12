@@ -20,6 +20,7 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  currentFarmId: int("currentFarmId"), // FK para farms.id - fazenda ativa do usuário
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -29,11 +30,58 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Farms (propriedades agrícolas) - suporte multi-fazenda
+ */
+export const farms = mysqlTable("farms", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // Proprietário da fazenda
+  
+  // Farm information
+  name: varchar("name", { length: 255 }).notNull(),
+  municipio: varchar("municipio", { length: 255 }).notNull(),
+  
+  // Geographic coordinates
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  altitude: decimal("altitude", { precision: 7, scale: 2 }), // Opcional
+  
+  // Agricultural information
+  mainCrop: varchar("mainCrop", { length: 64 }).notNull(), // e.g., 'soja', 'milho'
+  agriculturalWindowStart: int("agriculturalWindowStart"), // Mês de início (1-12)
+  agriculturalWindowEnd: int("agriculturalWindowEnd"), // Mês de término (1-12)
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Farm = typeof farms.$inferSelect;
+export type InsertFarm = typeof farms.$inferInsert;
+
+/**
+ * Farm users - relação N:N entre users e farms (suporte a RBAC futuro)
+ */
+export const farmUsers = mysqlTable("farm_users", {
+  id: int("id").autoincrement().primaryKey(),
+  farmId: int("farmId").notNull(),
+  userId: int("userId").notNull(),
+  
+  // Role na fazenda
+  role: mysqlEnum("role", ["owner", "manager", "viewer"]).default("viewer").notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FarmUser = typeof farmUsers.$inferSelect;
+export type InsertFarmUser = typeof farmUsers.$inferInsert;
+
+/**
  * User settings for the agricultural intelligence system
  */
 export const userSettings = mysqlTable("userSettings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id - configurações por fazenda
   
   // Telegram configuration
   telegramToken: varchar("telegramToken", { length: 255 }).notNull(),
@@ -81,6 +129,7 @@ export type InsertUserSettings = typeof userSettings.$inferInsert;
 export const weatherLogs = mysqlTable("weatherLogs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id - dados climáticos por fazenda
   
   // Current conditions
   temperature: decimal("temperature", { precision: 5, scale: 2 }).notNull(),
@@ -117,6 +166,7 @@ export type InsertWeatherLog = typeof weatherLogs.$inferInsert;
 export const weatherDailySummary = mysqlTable("weatherDailySummary", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id
   
   // Date of the summary
   summaryDate: timestamp("summaryDate").notNull(),
@@ -156,6 +206,7 @@ export type InsertWeatherDailySummary = typeof weatherDailySummary.$inferInsert;
 export const marketAlerts = mysqlTable("marketAlerts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id - alertas por fazenda
   
   // Alert content
   title: varchar("title", { length: 255 }).notNull(),
@@ -192,6 +243,7 @@ export type InsertMarketAlert = typeof marketAlerts.$inferInsert;
 export const marketAnalysisDaily = mysqlTable("marketAnalysisDaily", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id
   
   // Date of the analysis
   analysisDate: timestamp("analysisDate").notNull(),
@@ -232,6 +284,7 @@ export type InsertMarketAnalysisDaily = typeof marketAnalysisDaily.$inferInsert;
 export const notificationLogs = mysqlTable("notificationLogs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id
   
   // Notification type
   type: mysqlEnum("type", ["weather", "market"]).notNull(),
@@ -259,6 +312,7 @@ export type InsertNotificationLog = typeof notificationLogs.$inferInsert;
 export const scheduledJobs = mysqlTable("scheduledJobs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  farmId: int("farmId").notNull(), // FK para farms.id
   
   // Job type
   jobType: mysqlEnum("jobType", ["weather_check", "market_analysis"]).notNull(),
