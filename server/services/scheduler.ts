@@ -17,6 +17,9 @@ class Scheduler {
   private marketAlertInterval: NodeJS.Timeout | null = null;
   private urgentAlertInterval: NodeJS.Timeout | null = null;
   private isRunning = false;
+  private isWeatherChecking = false;
+  private isMarketChecking = false;
+  private isUrgentChecking = false;
 
   /**
    * Start the scheduler
@@ -95,6 +98,18 @@ class Scheduler {
    * Execute weather check for all users
    */
   private async executeWeatherCheck(): Promise<void> {
+    if (this.isWeatherChecking) {
+      logger.log({
+        service: 'scheduler',
+        action: 'weather_check',
+        level: 'warn',
+        status: 'pending',
+        message: 'Weather check already in progress, skipping',
+      });
+      return;
+    }
+
+    this.isWeatherChecking = true;
     const startTime = Date.now();
     logger.log({
       service: 'scheduler',
@@ -154,6 +169,8 @@ class Scheduler {
         message: 'Weather check failed',
         error: error instanceof Error ? error.message : String(error),
       });
+    } finally {
+      this.isWeatherChecking = false;
     }
   }
 
@@ -177,6 +194,18 @@ class Scheduler {
    * Execute market alerts for all users
    */
   private async executeMarketAlerts(): Promise<void> {
+    if (this.isMarketChecking) {
+      logger.log({
+        service: 'scheduler',
+        action: 'market_alerts',
+        level: 'warn',
+        status: 'pending',
+        message: 'Market alerts check already in progress, skipping',
+      });
+      return;
+    }
+
+    this.isMarketChecking = true;
     const startTime = Date.now();
     logger.log({
       service: 'scheduler',
@@ -221,6 +250,8 @@ class Scheduler {
         message: 'Market alerts check failed',
         error: error instanceof Error ? error.message : String(error),
       });
+    } finally {
+      this.isMarketChecking = false;
     }
   }
 
