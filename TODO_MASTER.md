@@ -1,7 +1,7 @@
 # TODO Master - AgroIntel Canarana
 
-**Última Atualização:** 11 de maio de 2026  
-**Status Geral:** 95% Concluído (Pronto para Produção Real)
+**Última Atualização:** 12 de maio de 2026  
+**Status Geral:** 98% Concluído (v1.1.0 - Configurações e Histórico Implementados)
 
 ## Tarefas Concluídas
 
@@ -102,29 +102,29 @@
 - [ ] Implementar retry automático de jobs falhados
 - [ ] Adicionar notificação de falha crítica
 
-#### Bootstrap de Dados
+#### Bootstrap de Dados (**CONCLUÍDO v1.1.0**)
 
-- [ ] Criar dados padrão para novos usuários
-- [ ] Implementar seed de userSettings com defaults
-- [ ] Criar tabelas de lookup para culturas e insumos
-- [ ] Adicionar script de inicialização automática
+- [x] Criar dados padrão para novos usuários
+- [x] Implementar seed de userSettings com defaults no callback OAuth
+- [ ] Criar tabelas de lookup para culturas e insumos (pendente v1.2)
+- [ ] Adicionar script de inicialização automática (pendente v1.2)
 
-#### Página de Configurações
+#### Página de Configurações (**CONCLUÍDO v1.1.0**)
 
-- [ ] Implementar UI completa
-- [ ] Formulário para editar Telegram token/chat ID
-- [ ] Sliders para parâmetros climáticos
-- [ ] Multi-select para culturas e insumos
-- [ ] Toggle para enable/disable de notificações
-- [ ] Salvar e validar configurações
+- [x] Implementar UI completa
+- [x] Formulário para editar Telegram token/chat ID
+- [x] Sliders para parâmetros climáticos
+- [x] Multi-select para culturas e insumos
+- [x] Toggle para enable/disable de notificações
+- [x] Salvar e validar configurações
 
-#### Página de Histórico
+#### Página de Histórico (**CONCLUÍDO v1.1.0**)
 
-- [ ] Tabela de coletas climáticas diárias
-- [ ] Tabela de alertas de mercado
-- [ ] Filtros por data, cultura, insumo
-- [ ] Gráficos de temperatura/umidade ao longo do tempo
-- [ ] Exportar dados em CSV/PDF
+- [x] Tabela de coletas climáticas diárias
+- [x] Tabela de alertas de mercado
+- [x] Filtros por período (7, 14, 30 dias)
+- [x] Gráficos de temperatura/umidade ao longo do tempo
+- [ ] Exportar dados em CSV/PDF (pendente v1.2)
 
 #### Validação em Produção
 

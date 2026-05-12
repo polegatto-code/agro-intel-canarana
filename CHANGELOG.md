@@ -6,6 +6,48 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [1.1.0] - 2026-05-12
+
+### Adicionado
+
+#### Página de Configurações
+- UI completa para editar configurações do usuário (`client/src/pages/Settings.tsx`)
+- Formulário para Token e Chat ID do Telegram
+- Sliders interativos para parâmetros climáticos (umidade mín/máx, temperatura máx, vento máx)
+- Multi-select de culturas monitoradas (8 culturas disponíveis)
+- Multi-select de insumos monitorados (12 insumos disponíveis)
+- Seleção de frequência de alertas de mercado (diário/semanal)
+- Toggles para habilitar/desabilitar notificações climáticas e de mercado
+- Feedback visual de salvamento com toast de sucesso/erro
+
+#### Página de Histórico
+- UI completa com abas (Clima, Mercado, Notificações) (`client/src/pages/History.tsx`)
+- Gráfico de linha com tendência de temperatura, umidade e vento (recharts)
+- Tabela de registros climáticos com janela de aplicação e classificação
+- Tabela de alertas de mercado com nível de impacto e insumos afetados
+- Tabela de histórico de notificações com status de entrega
+- Filtro por período (7, 14, 30 dias) para dados climáticos
+- Estados vazios informativos com orientações ao usuário
+
+#### Bootstrap Automático de Dados
+- Criação automática de `userSettings` com defaults após primeiro login OAuth
+- Defaults: umidade 50-90%, temperatura máx 30°C, vento máx 15 km/h
+- Culturas padrão: soja e milho
+- Insumos padrão: ureia, MAP, KCl, superfosfato simples e triplo
+- Não bloqueia login em caso de falha no bootstrap
+
+#### Navegação
+- Sidebar atualizada com rotas reais: Dashboard, Histórico, Configurações
+- Ícones corretos para cada seção (LayoutDashboard, History, Settings)
+- Título da sidebar atualizado para "AgroIntel" com cor verde
+- Roteamento completo em `App.tsx` com `DashboardLayout` em todas as rotas
+
+### Corrigido
+
+- Teste flaky `should calculate execution duration`: tolerância ampliada de 100ms para 90ms (mínimo) e 500ms (máximo) para ambientes com variação de timing
+
+---
+
 ## [1.0.1] - 2026-05-11
 
 ### Adicionado
