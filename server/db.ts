@@ -258,25 +258,37 @@ export async function createMarketAlert(alert: Omit<MarketAlert, 'id' | 'created
   return db.insert(marketAlerts).values(alert);
 }
 
-export async function getMarketAlerts(userId: number, farmId?: number, limit: number = 10) {
+export async function getMarketAlerts(userId: number, farmId?: number, limit: number = 10, crops?: string[]) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db
-    .select()
-    .from(marketAlerts)
-    .where(eq(marketAlerts.userId, userId));
+  let conditions = [eq(marketAlerts.userId, userId)];
 
   if (farmId !== undefined) {
-    query = db
-      .select()
-      .from(marketAlerts)
-      .where(and(eq(marketAlerts.userId, userId), eq(marketAlerts.farmId, farmId)));
+    conditions.push(eq(marketAlerts.farmId, farmId));
   }
 
-  return query
+  // Nota: A filtragem por JSON no MySQL via Drizzle para arrays pode ser complexa.
+  // Como o volume de alertas por fazenda é baixo (limit 10-50), 
+  // faremos a filtragem em memória ou via SQL se as culturas forem fornecidas.
+  
+  const result = await db
+    .select()
+    .from(marketAlerts)
+    .where(and(...conditions))
     .orderBy(desc(marketAlerts.createdAt))
-    .limit(limit);
+    .limit(limit * 2); // Buscamos um pouco mais para garantir o limite após filtro
+
+  if (crops && crops.length > 0) {
+    return result
+      .filter(alert => {
+        const affected = alert.affectedCrops as string[];
+        return affected.length === 0 || affected.some(c => crops.includes(c.toLowerCase()));
+      })
+      .slice(0, limit);
+  }
+
+  return result.slice(0, limit);
 }
 
 export async function updateMarketAlert(alertId: number, updates: Partial<Omit<MarketAlert, 'id' | 'createdAt' | 'updatedAt'>>) {

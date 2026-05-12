@@ -128,9 +128,19 @@ export const appRouter = router({
       .input(z.object({
         farmId: z.number(),
         limit: z.number().min(1).max(50).default(10),
+        filterByMonitoredCrops: z.boolean().default(false),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getMarketAlerts(ctx.user.id, input.farmId, input.limit);
+        let monitoredCrops: string[] | undefined = undefined;
+        
+        if (input.filterByMonitoredCrops) {
+          const settings = await db.getUserSettings(ctx.user.id, input.farmId);
+          if (settings && settings.monitoredCrops) {
+            monitoredCrops = settings.monitoredCrops as string[];
+          }
+        }
+
+        return db.getMarketAlerts(ctx.user.id, input.farmId, input.limit, monitoredCrops);
       }),
 
     create: protectedProcedure

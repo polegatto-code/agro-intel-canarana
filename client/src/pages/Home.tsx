@@ -39,7 +39,7 @@ export default function Home() {
   );
 
   const alertsQuery = trpc.marketAlerts.list.useQuery(
-    activeFarm ? { farmId: activeFarm.id, limit: 3 } : skipToken,
+    activeFarm ? { farmId: activeFarm.id, limit: 3, filterByMonitoredCrops: true } : skipToken,
     { enabled: isAuthenticated && !!activeFarm }
   );
 
@@ -340,13 +340,26 @@ export default function Home() {
         {/* Recent Market Alerts */}
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-amber-400" />
-              Últimos Alertas de Mercado
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Análise de notícias agrícolas relevantes
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-amber-400" />
+                  Últimos Alertas de Mercado
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Filtrado por suas culturas monitoradas
+                </CardDescription>
+              </div>
+              {settingsQuery.data?.monitoredCrops && (
+                <div className="flex gap-1">
+                  {(settingsQuery.data.monitoredCrops as string[]).map(crop => (
+                    <Badge key={crop} variant="secondary" className="text-[10px] uppercase">
+                      {crop}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {alertsQuery.data && alertsQuery.data.length > 0 ? (
@@ -359,6 +372,14 @@ export default function Home() {
                     <h4 className="font-semibold text-white mb-1">{alert.title}</h4>
                     <p className="text-slate-300 text-sm mb-2">{alert.summary}</p>
                     <div className="flex gap-2 flex-wrap">
+                      {alert.affectedCrops.map((crop) => (
+                        <span
+                          key={crop}
+                          className="bg-emerald-900/40 text-emerald-400 text-xs px-2 py-1 rounded border border-emerald-800/50 uppercase font-semibold"
+                        >
+                          {crop}
+                        </span>
+                      ))}
                       {alert.affectedInputs.map((input) => (
                         <span
                           key={input}
