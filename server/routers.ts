@@ -79,6 +79,7 @@ export const appRouter = router({
     // This is called by the scheduled job (internal)
     recordWeather: protectedProcedure
       .input(z.object({
+        farmId: z.number(),
         temperature: z.number(),
         humidity: z.number(),
         windSpeed: z.number(),
@@ -97,6 +98,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.createWeatherLog({
           userId: ctx.user.id,
+          farmId: input.farmId,
           temperature: input.temperature.toString() as any,
           humidity: input.humidity,
           windSpeed: input.windSpeed.toString() as any,

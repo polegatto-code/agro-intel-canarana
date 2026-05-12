@@ -612,3 +612,89 @@ export async function getUserFarms(userId: number): Promise<Farm[]> {
     return [];
   }
 }
+
+
+/**
+ * ========== WEATHER CACHE BY FARM ==========
+ */
+
+export async function getWeatherCacheByFarm(farmId: number, maxAgeMinutes: number = 60): Promise<WeatherLog | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
+    
+    const result = await db
+      .select()
+      .from(weatherLogs)
+      .where(and(eq(weatherLogs.farmId, farmId), desc(weatherLogs.recordedAt)))
+      .limit(1);
+    
+    if (result.length === 0) return null;
+    
+    const log = result[0];
+    if (log.recordedAt && log.recordedAt.getTime() > cutoffTime.getTime()) {
+      return log;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Database] Failed to get weather cache:', error);
+    return null;
+  }
+}
+
+export async function getLatestWeatherByFarm(farmId: number): Promise<WeatherLog | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .select()
+      .from(weatherLogs)
+      .where(eq(weatherLogs.farmId, farmId))
+      .orderBy(desc(weatherLogs.recordedAt))
+      .limit(1);
+    
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('[Database] Failed to get latest weather by farm:', error);
+    return null;
+  }
+}
+
+export async function getWeatherHistoryByFarm(farmId: number, days: number = 7): Promise<WeatherLog[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    return await db
+      .select()
+      .from(weatherLogs)
+      .where(and(eq(weatherLogs.farmId, farmId)))
+      .orderBy(desc(weatherLogs.recordedAt));
+  } catch (error) {
+    console.error('[Database] Failed to get weather history by farm:', error);
+    return [];
+  }
+}
+
+export async function getWeatherDailySummaryByFarm(farmId: number, days: number = 7): Promise<WeatherDailySummary[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select()
+      .from(weatherDailySummary)
+      .where(eq(weatherDailySummary.farmId, farmId))
+      .orderBy(desc(weatherDailySummary.summaryDate));
+  } catch (error) {
+    console.error('[Database] Failed to get weather daily summary by farm:', error);
+    return [];
+  }
+}
