@@ -95,6 +95,7 @@ class Scheduler {
    * Execute weather check for all users
    */
   private async executeWeatherCheck(): Promise<void> {
+    const startTime = Date.now();
     logger.log({
       service: 'scheduler',
       action: 'weather_check',
@@ -112,7 +113,7 @@ class Scheduler {
           const farms = await db.getUserFarms(user.userId);
           
           for (const farm of farms) {
-            const farmSettings = await db.getUserSettings(user.userId);
+            const farmSettings = await db.getUserSettings(user.userId, farm.id);
             if (!farmSettings) continue;
             
             await executeWeatherCheckForUser(
@@ -132,20 +133,24 @@ class Scheduler {
         }
       }
 
+      const duration = Date.now() - startTime;
       logger.log({
         service: 'scheduler',
         action: 'weather_check',
         level: 'info',
         status: 'success',
+        duration,
         message: 'Weather check completed for all farms',
         metadata: { userCount: users.length, farmCount }
       });
     } catch (error) {
+      const duration = Date.now() - startTime;
       logger.log({
         service: 'scheduler',
         action: 'weather_check',
         level: 'error',
         status: 'failed',
+        duration,
         message: 'Weather check failed',
         error: error instanceof Error ? error.message : String(error),
       });
@@ -172,6 +177,7 @@ class Scheduler {
    * Execute market alerts for all users
    */
   private async executeMarketAlerts(): Promise<void> {
+    const startTime = Date.now();
     logger.log({
       service: 'scheduler',
       action: 'market_alerts',
@@ -194,20 +200,24 @@ class Scheduler {
         }
       }
 
+      const duration = Date.now() - startTime;
       logger.log({
         service: 'scheduler',
         action: 'market_alerts',
         level: 'info',
         status: 'success',
+        duration,
         message: 'Market alerts check completed for all users',
         metadata: { userCount: users.length }
       });
     } catch (error) {
+      const duration = Date.now() - startTime;
       logger.log({
         service: 'scheduler',
         action: 'market_alerts',
         level: 'error',
         status: 'failed',
+        duration,
         message: 'Market alerts check failed',
         error: error instanceof Error ? error.message : String(error),
       });
@@ -269,6 +279,7 @@ export async function executeWeatherCheckForUser(
   maxTemperature: number = 30,
   maxWindSpeed: number = 15
 ): Promise<void> {
+  const startTime = Date.now();
   logger.log({
     service: 'weather_job',
     action: 'execute',
@@ -329,6 +340,7 @@ export async function executeWeatherCheckForUser(
     const priority = agronomicAnalysis.sprayRecommendation === 'recomendado' ? 'high' : 'normal';
     await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
 
+    const duration = Date.now() - startTime;
     logger.log({
       service: 'weather_job',
       action: 'execute',
@@ -336,10 +348,12 @@ export async function executeWeatherCheckForUser(
       status: 'success',
       userId,
       farmId,
+      duration,
       message: 'Weather check job completed successfully for farm',
       metadata: { classification: analysis.overallClassification },
     });
   } catch (error) {
+    const duration = Date.now() - startTime;
     logger.log({
       service: 'weather_job',
       action: 'execute',
@@ -347,6 +361,7 @@ export async function executeWeatherCheckForUser(
       status: 'failed',
       userId,
       farmId,
+      duration,
       message: 'Weather check job failed for farm',
       error: error instanceof Error ? error.message : String(error),
     });
@@ -406,12 +421,14 @@ export async function executeMarketAnalysisForUser(
   telegramToken: string,
   telegramChatId: string
 ): Promise<void> {
+  const startTime = Date.now();
   logger.log({
     service: 'market_job',
     action: 'execute',
     level: 'info',
     status: 'pending',
     userId,
+    farmId,
     message: 'Starting market analysis job',
   });
 
@@ -419,12 +436,15 @@ export async function executeMarketAnalysisForUser(
     const rawNews = await newsCollectorService.collectNews();
     
     if (rawNews.length === 0) {
+      const duration = Date.now() - startTime;
       logger.log({
         service: 'market_job',
         action: 'execute',
         level: 'info',
         status: 'success',
         userId,
+        farmId,
+        duration,
         message: 'No new market news to analyze',
       });
       return;
@@ -437,22 +457,28 @@ export async function executeMarketAnalysisForUser(
     const message = newsAnalysisService.generateTelegramMessage(analysis);
     await telegramService.sendMessage(telegramToken, telegramChatId, message, 'normal');
 
+    const duration = Date.now() - startTime;
     logger.log({
       service: 'market_job',
       action: 'execute',
       level: 'info',
       status: 'success',
       userId,
+      farmId,
+      duration,
       message: 'Market analysis job completed',
       metadata: { newsCount: rawNews.length, riskLevel: analysis.riskLevel }
     });
   } catch (error) {
+    const duration = Date.now() - startTime;
     logger.log({
       service: 'market_job',
       action: 'execute',
       level: 'error',
       status: 'failed',
       userId,
+      farmId,
+      duration,
       message: 'Market analysis job failed',
       error: error instanceof Error ? error.message : String(error),
     });
