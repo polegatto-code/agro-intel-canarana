@@ -1,6 +1,11 @@
 import { logger } from './logger';
 import * as db from '../db';
 
+// Rate limit tracking for OpenWeatherMap API
+const apiCallTimestamps: Map<number, number[]> = new Map();
+const RATE_LIMIT_CALLS = 60; // 60 calls per minute
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+
 export type OperationalClassification = 'excelente' | 'boa' | 'moderada' | 'ruim' | 'nao-recomendada';
 
 export interface WeatherForecast {
@@ -129,13 +134,57 @@ function findApplicationWindow(
 }
 
 /**
+ * Check if API call is allowed (rate limit protection)
+ */
+function isApiCallAllowed(farmId: number): boolean {
+  const now = Date.now();
+  const timestamps = apiCallTimestamps.get(farmId) || [];
+  
+  // Remove timestamps outside the window
+  const validTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW_MS);
+  
+  if (validTimestamps.length >= RATE_LIMIT_CALLS) {
+    logger.log({
+      service: 'weather',
+      action: 'rate_limit',
+      level: 'warn',
+      status: 'pending',
+      farmId,
+      message: `Rate limit reached for farm ${farmId}`,
+      metadata: { callsInWindow: validTimestamps.length }
+    });
+    return false;
+  }
+  
+  // Record this call
+  validTimestamps.push(now);
+  apiCallTimestamps.set(farmId, validTimestamps);
+  
+  return true;
+}
+
+/**
  * Fetch weather data from OpenWeatherMap API
  */
 async function fetchWeatherFromAPI(
   latitude: number = -7.5,
   longitude: number = -51.5,
-  apiKey?: string
+  apiKey?: string,
+  farmId: number = 0
 ): Promise<any> {
+  // Check rate limit before making API call
+  if (!isApiCallAllowed(farmId)) {
+    logger.log({
+      service: 'weather',
+      action: 'fetch_api',
+      level: 'warn',
+      status: 'pending',
+      farmId,
+      message: 'Rate limit exceeded, using cached or mock data',
+    });
+    return generateMockWeatherData();
+  }
+
   // Default coordinates for Canarana-MT
   if (!apiKey) {
     logger.log({
@@ -279,7 +328,8 @@ export async function analyzeWeather(
   maxWindSpeed: number = 15,
   apiKey?: string,
   latitude: number = -7.5,
-  longitude: number = -51.5
+  longitude: number = -51.5,
+  farmId: number = 0
 ): Promise<WeatherAnalysis> {
   logger.log({
     service: 'weather',
@@ -292,7 +342,7 @@ export async function analyzeWeather(
 
   try {
     // Fetch weather data
-    const weatherData = await fetchWeatherFromAPI(latitude, longitude, apiKey);
+    const weatherData = await fetchWeatherFromAPI(latitude, longitude, apiKey, farmId);
 
     // Parse into hourly forecast
     const hourlyForecast = parseWeatherData(

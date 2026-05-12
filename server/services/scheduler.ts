@@ -286,7 +286,8 @@ export async function executeWeatherCheckForUser(
       maxWindSpeed,
       process.env.OPENWEATHER_API_KEY,
       latitude,
-      longitude
+      longitude,
+      farmId
     );
 
     await saveWeatherAnalysis(userId, analysis, farmId);
