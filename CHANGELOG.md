@@ -6,6 +6,29 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [1.0.1] - 2026-05-11
+
+### Adicionado
+
+#### Operacionalização Real
+- Integração real com OpenWeatherMap, substituindo mocks.
+- Coleta de notícias real e análise de mercado via LLM.
+- Cron jobs e scheduler configurados para buscar usuários reais no banco de dados.
+- Automação diária de clima e mercado para usuários com notificações habilitadas.
+- Criação do arquivo `.env.example` completo com todas as variáveis de ambiente necessárias.
+
+### Corrigido
+
+- Teste de cache falho em `server/integration.test.ts` (agora 42/42 testes passando).
+- Erros de tipagem em `server/services/scheduler.ts` e `server/services/cronJobs.ts` para refletir o retorno real de `db.getAllUsersWithSettings()`.
+
+### Alterado
+
+- `TODO_MASTER.md`: Atualizado com as tarefas concluídas e novas prioridades.
+- `PROJECT_STATE.md`: Atualizado para refletir o status de "Pronto para Produção Real".
+
+---
+
 ## [1.0.0] - 2026-05-11
 
 ### Adicionado

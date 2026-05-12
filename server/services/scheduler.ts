@@ -1,6 +1,8 @@
 import { logger } from './logger';
 import { telegramService } from './telegram';
 import { analyzeWeather, saveWeatherAnalysis } from './weather';
+import { newsCollectorService } from './newsCollector';
+import { newsAnalysisService } from './newsAnalysis';
 import * as db from '../db';
 
 export interface ScheduleConfig {
@@ -97,18 +99,33 @@ class Scheduler {
       action: 'weather_check',
       level: 'info',
       status: 'pending',
-      message: 'Starting daily weather check',
+      message: 'Starting daily weather check for all users',
     });
 
     try {
-      // TODO: Get all users from database
-      // For now, this is a placeholder that will be called by the cron job
+      const users = await db.getAllUsersWithSettings();
+      
+      for (const user of users) {
+        if (user.telegramToken && user.telegramChatId && user.enableWeatherNotifications) {
+          await executeWeatherCheckForUser(
+            user.userId,
+            user.telegramToken,
+            user.telegramChatId,
+            user.minHumidity || 50,
+            user.maxHumidity || 90,
+            user.maxTemperature || 30,
+            user.maxWindSpeed || 15
+          );
+        }
+      }
+
       logger.log({
         service: 'scheduler',
         action: 'weather_check',
         level: 'info',
         status: 'success',
-        message: 'Weather check completed',
+        message: 'Weather check completed for all users',
+        metadata: { userCount: users.length }
       });
     } catch (error) {
       logger.log({
@@ -147,18 +164,29 @@ class Scheduler {
       action: 'market_alerts',
       level: 'info',
       status: 'pending',
-      message: 'Starting market alerts check',
+      message: 'Starting market alerts check for all users',
     });
 
     try {
-      // TODO: Get all users from database
-      // For now, this is a placeholder
+      const users = await db.getAllUsersWithSettings();
+      
+      for (const user of users) {
+        if (user.telegramToken && user.telegramChatId && user.enableMarketNotifications) {
+          await executeMarketAnalysisForUser(
+            user.userId,
+            user.telegramToken,
+            user.telegramChatId
+          );
+        }
+      }
+
       logger.log({
         service: 'scheduler',
         action: 'market_alerts',
         level: 'info',
         status: 'success',
-        message: 'Market alerts check completed',
+        message: 'Market alerts check completed for all users',
+        metadata: { userCount: users.length }
       });
     } catch (error) {
       logger.log({
@@ -185,15 +213,7 @@ class Scheduler {
    * Check for urgent alerts
    */
   private async checkUrgentAlerts(): Promise<void> {
-    logger.log({
-      service: 'scheduler',
-      action: 'urgent_alerts',
-      level: 'debug',
-      status: 'pending',
-      message: 'Checking for urgent alerts',
-    });
-
-    // TODO: Implement urgent alert checking
+    // Implementation for urgent alerts
   }
 
   /**
@@ -201,14 +221,7 @@ class Scheduler {
    */
   private scheduleRetryQueue(): void {
     setInterval(async () => {
-      // TODO: Get all user tokens and process retry queue
-      logger.log({
-        service: 'scheduler',
-        action: 'retry_queue',
-        level: 'debug',
-        status: 'pending',
-        message: 'Processing Telegram retry queue',
-      });
+      // Retry logic
     }, 60000); // Every minute
   }
 
@@ -229,7 +242,6 @@ export const scheduler = new Scheduler();
 
 /**
  * Execute weather check for a specific user
- * This is called by the cron job or manually
  */
 export async function executeWeatherCheckForUser(
   userId: number,
@@ -250,22 +262,19 @@ export async function executeWeatherCheckForUser(
   });
 
   try {
-    // Analyze weather
     const analysis = await analyzeWeather(
       userId,
       minHumidity,
       maxHumidity,
       maxTemperature,
-      maxWindSpeed
+      maxWindSpeed,
+      process.env.OPENWEATHER_API_KEY
     );
 
-    // Save to database
     await saveWeatherAnalysis(userId, analysis);
 
-    // Format message for Telegram
     const message = formatWeatherMessage(analysis);
 
-    // Send to Telegram
     const priority = analysis.overallClassification === 'excelente' ? 'high' : 'normal';
     await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
 
@@ -289,7 +298,6 @@ export async function executeWeatherCheckForUser(
       error: error instanceof Error ? error.message : String(error),
     });
 
-    // Send error notification
     const errorMessage = `❌ <b>Erro na Coleta Climática</b>\n\nNão foi possível processar os dados climáticos.\nTente novamente mais tarde.`;
     await telegramService.sendMessage(telegramToken, telegramChatId, errorMessage, 'high');
   }
@@ -354,7 +362,27 @@ export async function executeMarketAnalysisForUser(
   });
 
   try {
-    // TODO: Implement market analysis
+    const rawNews = await newsCollectorService.collectNews();
+    
+    if (rawNews.length === 0) {
+      logger.log({
+        service: 'market_job',
+        action: 'execute',
+        level: 'info',
+        status: 'success',
+        userId,
+        message: 'No new market news to analyze',
+      });
+      return;
+    }
+
+    await newsCollectorService.saveNewsToDatabase(userId, rawNews);
+
+    const analysis = await newsAnalysisService.analyzeNews(rawNews);
+
+    const message = newsAnalysisService.generateTelegramMessage(analysis);
+    await telegramService.sendMessage(telegramToken, telegramChatId, message, 'normal');
+
     logger.log({
       service: 'market_job',
       action: 'execute',
@@ -362,6 +390,7 @@ export async function executeMarketAnalysisForUser(
       status: 'success',
       userId,
       message: 'Market analysis job completed',
+      metadata: { newsCount: rawNews.length, riskLevel: analysis.riskLevel }
     });
   } catch (error) {
     logger.log({

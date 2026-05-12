@@ -164,7 +164,7 @@ describe('Integration Tests - End-to-End Pipeline', () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       const value = cacheService.get('expire-key');
-      expect(value).toBeUndefined();
+      expect(value).toBeNull();
     });
 
     it('should track cache statistics', () => {

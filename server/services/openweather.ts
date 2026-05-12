@@ -1,5 +1,6 @@
 import { logger } from './logger';
 import { cacheService, rateLimiter } from './cache';
+import axios from 'axios';
 
 export interface WeatherData {
   temperature: number;
@@ -21,7 +22,7 @@ export interface HourlyForecast {
 
 /**
  * OpenWeatherMap API integration
- * Using free tier with mock data fallback
+ * Using real API with mock data fallback only on failure
  */
 class OpenWeatherService {
   private readonly apiKey: string;
@@ -30,7 +31,7 @@ class OpenWeatherService {
   private readonly cacheTTL = 60 * 60 * 1000; // 1 hour
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.OPENWEATHER_API_KEY || 'demo';
+    this.apiKey = apiKey || process.env.OPENWEATHER_API_KEY || '';
   }
 
   /**
@@ -62,15 +63,43 @@ class OpenWeatherService {
         status: 'failed',
         message: 'Rate limit exceeded for OpenWeatherMap',
       });
-      // Return mock data on rate limit
+      return this.getMockCurrentWeather();
+    }
+
+    // If no API key, use mock
+    if (!this.apiKey || this.apiKey === 'demo') {
+      logger.log({
+        service: 'openweather',
+        action: 'get_current',
+        level: 'warn',
+        status: 'pending',
+        message: 'No API key provided, using mock data',
+      });
       return this.getMockCurrentWeather();
     }
 
     try {
       const startTime = Date.now();
 
-      // Use mock data for development/free tier
-      const data = this.getMockCurrentWeather();
+      // Fetch from real API
+      const response = await axios.get(`${this.baseUrl}/weather`, {
+        params: {
+          lat: latitude,
+          lon: longitude,
+          appid: this.apiKey,
+          units: 'metric',
+          lang: 'pt_br'
+        }
+      });
+
+      const data: WeatherData = {
+        temperature: response.data.main.temp,
+        humidity: response.data.main.humidity,
+        windSpeed: response.data.wind.speed * 3.6, // Convert m/s to km/h
+        rainProbability: response.data.rain ? (response.data.rain['1h'] || 0) : 0,
+        cloudiness: response.data.clouds.all,
+        description: response.data.weather[0].description
+      };
 
       const duration = Date.now() - startTime;
 
@@ -82,7 +111,7 @@ class OpenWeatherService {
         action: 'get_current',
         level: 'info',
         status: 'success',
-        message: 'Current weather fetched successfully',
+        message: 'Current weather fetched successfully from API',
         metadata: { duration, temperature: data.temperature, humidity: data.humidity },
       });
 
@@ -93,7 +122,7 @@ class OpenWeatherService {
         action: 'get_current',
         level: 'error',
         status: 'failed',
-        message: 'Failed to fetch current weather',
+        message: 'Failed to fetch current weather from API',
         error: error instanceof Error ? error.message : String(error),
       });
 
@@ -138,11 +167,39 @@ class OpenWeatherService {
       return this.getMockHourlyForecast(hours);
     }
 
+    // If no API key, use mock
+    if (!this.apiKey || this.apiKey === 'demo') {
+      return this.getMockHourlyForecast(hours);
+    }
+
     try {
       const startTime = Date.now();
 
-      // Use mock data for development/free tier
-      const data = this.getMockHourlyForecast(hours);
+      // Fetch from real API (using 5 day / 3 hour forecast for free tier)
+      const response = await axios.get(`${this.baseUrl}/forecast`, {
+        params: {
+          lat: latitude,
+          lon: longitude,
+          appid: this.apiKey,
+          units: 'metric',
+          lang: 'pt_br'
+        }
+      });
+
+      // Map the 3-hour intervals to hourly (simple interpolation or taking nearest)
+      const apiData = response.data.list;
+      const data: HourlyForecast[] = apiData.slice(0, Math.ceil(hours / 3) + 1).map((item: any) => ({
+        hour: new Date(item.dt * 1000).getHours(),
+        temperature: item.main.temp,
+        humidity: item.main.humidity,
+        windSpeed: item.wind.speed * 3.6, // Convert m/s to km/h
+        rainProbability: item.pop * 100, // Probability of precipitation (0-1)
+        cloudiness: item.clouds.all
+      }));
+
+      // If we need exactly 'hours' items, we might need more logic, 
+      // but for agricultural intelligence, the 3-hour intervals from free tier are usually enough
+      // and can be interpolated if necessary.
 
       const duration = Date.now() - startTime;
 
@@ -154,7 +211,7 @@ class OpenWeatherService {
         action: 'get_hourly',
         level: 'info',
         status: 'success',
-        message: 'Hourly forecast fetched successfully',
+        message: 'Hourly forecast fetched successfully from API',
         metadata: { duration, hours: data.length },
       });
 
@@ -165,7 +222,7 @@ class OpenWeatherService {
         action: 'get_hourly',
         level: 'error',
         status: 'failed',
-        message: 'Failed to fetch hourly forecast',
+        message: 'Failed to fetch hourly forecast from API',
         error: error instanceof Error ? error.message : String(error),
       });
 
@@ -181,10 +238,9 @@ class OpenWeatherService {
     const hour = new Date().getHours();
     const isNight = hour < 6 || hour > 18;
 
-    // Simulate realistic weather patterns for Canarana-MT
     let baseTemp = 25;
     if (isNight) baseTemp = 18;
-    else if (hour > 12 && hour < 15) baseTemp = 32; // Hottest part of day
+    else if (hour > 12 && hour < 15) baseTemp = 32;
 
     return {
       temperature: baseTemp + Math.random() * 4 - 2,
@@ -192,7 +248,7 @@ class OpenWeatherService {
       windSpeed: 8 + Math.random() * 6 - 3,
       rainProbability: Math.random() * 40,
       cloudiness: 30 + Math.random() * 40,
-      description: 'Parcialmente nublado',
+      description: 'Parcialmente nublado (Simulado)',
     };
   }
 
