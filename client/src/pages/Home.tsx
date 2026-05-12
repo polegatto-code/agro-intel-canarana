@@ -1,7 +1,8 @@
 import { skipToken } from "@/lib/skipToken";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Cloud, Droplets, Wind, TrendingUp, Calendar, Bell } from "lucide-react";
+import { AlertCircle, Cloud, Droplets, Wind, TrendingUp, Calendar, Bell, Thermometer, Sprout, CheckCircle2, XCircle, Info, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
@@ -40,6 +41,24 @@ export default function Home() {
   const alertsQuery = trpc.marketAlerts.list.useQuery(
     activeFarm ? { farmId: activeFarm.id, limit: 3 } : skipToken,
     { enabled: isAuthenticated && !!activeFarm }
+  );
+
+  const cropsQuery = trpc.crops.list.useQuery(
+    activeFarm ? { farmId: activeFarm.id } : skipToken,
+    { enabled: isAuthenticated && !!activeFarm }
+  );
+
+  const mainCrop = cropsQuery.data?.find(c => c.name === activeFarm?.mainCrop) || cropsQuery.data?.[0];
+
+  const agronomicAnalysisQuery = trpc.crops.analyzeConditions.useQuery(
+    mainCrop && weatherQuery.data ? {
+      cropName: mainCrop.name,
+      temperature: Number(weatherQuery.data.temperature),
+      humidity: weatherQuery.data.humidity,
+      windSpeed: Number(weatherQuery.data.windSpeed),
+      rainProbability: 0, // Simplificado para o dashboard
+    } : skipToken,
+    { enabled: !!mainCrop && !!weatherQuery.data }
   );
 
   // Update current time
@@ -187,55 +206,133 @@ export default function Home() {
               <p className="text-slate-400 text-sm mt-2">Máximo recomendado: 15 km/h</p>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Application Window */}
-        {weatherQuery.data && (
-          <Card className="bg-gradient-to-r from-emerald-900 to-emerald-800 border-emerald-700 mb-8">
-            <CardHeader>
+          {/* Delta T Card */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="pb-3">
               <CardTitle className="text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Janela de Aplicação Recomendada
+                <Thermometer className="w-5 h-5 text-purple-400" />
+                Delta T
               </CardTitle>
-              <CardDescription className="text-emerald-100">
-                Baseado nas condições climáticas de hoje
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              {weatherQuery.data.isApplicationRecommended ? (
-                <div className="bg-emerald-900 bg-opacity-50 rounded-lg p-6 border border-emerald-600">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-emerald-100 font-semibold">Aplicação RECOMENDADA</span>
-                    <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      ✓ Excelente
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="text-4xl font-bold text-white">
+                {agronomicAnalysisQuery.data?.deltaT.toFixed(1) || '--'}°C
+              </div>
+              <div className="mt-2">
+                {agronomicAnalysisQuery.data ? (
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      agronomicAnalysisQuery.data.deltaTStatus === 'ideal' 
+                        ? "border-emerald-500 text-emerald-400" 
+                        : agronomicAnalysisQuery.data.deltaTStatus === 'aceitavel'
+                        ? "border-amber-500 text-amber-400"
+                        : "border-red-500 text-red-400"
+                    }
+                  >
+                    {agronomicAnalysisQuery.data.deltaTStatus.toUpperCase()}
+                  </Badge>
+                ) : (
+                  <p className="text-slate-400 text-sm">Ideal: 2-8°C</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Agronomic Operational Status */}
+        {mainCrop && agronomicAnalysisQuery.data && (
+          <Card className={`mb-8 border-l-4 ${
+            agronomicAnalysisQuery.data.sprayRecommendation === 'recomendado' 
+              ? 'bg-emerald-900/20 border-emerald-500' 
+              : agronomicAnalysisQuery.data.sprayRecommendation === 'aceitavel'
+              ? 'bg-amber-900/20 border-amber-500'
+              : 'bg-red-900/20 border-red-500'
+          }`}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Sprout className="w-5 h-5 text-emerald-400" />
+                    Status Operacional: {mainCrop.displayName}
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Análise técnica para pulverização e manejo
+                  </CardDescription>
+                </div>
+                <Badge className={
+                  agronomicAnalysisQuery.data.sprayRecommendation === 'recomendado'
+                    ? 'bg-emerald-600'
+                    : agronomicAnalysisQuery.data.sprayRecommendation === 'aceitavel'
+                    ? 'bg-amber-600'
+                    : 'bg-red-600'
+                }>
+                  Score: {agronomicAnalysisQuery.data.operationalWindow.score}/100
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-6 items-center">
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-start gap-3">
+                    {agronomicAnalysisQuery.data.sprayRecommendation === 'recomendado' ? (
+                      <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-1" />
+                    ) : agronomicAnalysisQuery.data.sprayRecommendation === 'aceitavel' ? (
+                      <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-1" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-red-500 shrink-0 mt-1" />
+                    )}
                     <div>
-                      <p className="text-emerald-200 text-sm">Início recomendado</p>
-                      <p className="text-2xl font-bold text-white">
-                        {weatherQuery.data.applicationWindowStart}:00
+                      <p className="text-white font-semibold text-lg">
+                        {agronomicAnalysisQuery.data.sprayRecommendation === 'recomendado' 
+                          ? 'Condições Ideais' 
+                          : agronomicAnalysisQuery.data.sprayRecommendation === 'aceitavel'
+                          ? 'Condições Aceitáveis'
+                          : 'Condições Críticas'}
+                      </p>
+                      <p className="text-slate-300">
+                        {agronomicAnalysisQuery.data.sprayReason}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-emerald-200 text-sm">Término recomendado</p>
-                      <p className="text-2xl font-bold text-white">
-                        {weatherQuery.data.applicationWindowEnd}:00
+                  </div>
+
+                  {agronomicAnalysisQuery.data.cropSpecificAlerts.length > 0 && (
+                    <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                      <p className="text-xs font-semibold text-slate-400 uppercase mb-2 flex items-center gap-1">
+                        <Info className="w-3 h-3" /> Alertas Técnicos
                       </p>
+                      <ul className="space-y-1">
+                        {agronomicAnalysisQuery.data.cropSpecificAlerts.map((alert, i) => (
+                          <li key={i} className="text-sm text-slate-300 flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-amber-500" />
+                            {alert}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 w-full md:w-auto">
+                  <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center min-w-[140px]">
+                    <p className="text-slate-400 text-xs mb-1">Delta T</p>
+                    <p className={`text-2xl font-bold ${
+                      agronomicAnalysisQuery.data.deltaTStatus === 'ideal' ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      {agronomicAnalysisQuery.data.deltaT.toFixed(1)}°C
+                    </p>
+                  </div>
+                  <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center min-w-[140px]">
+                    <p className="text-slate-400 text-xs mb-1">Risco Chuva</p>
+                    <p className={`text-2xl font-bold ${
+                      agronomicAnalysisQuery.data.rainRisk === 'baixo' ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      {agronomicAnalysisQuery.data.rainRisk.toUpperCase()}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-red-900 bg-opacity-50 rounded-lg p-6 border border-red-600">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-5 h-5 text-red-400" />
-                    <span className="text-red-100 font-semibold">Aplicação NÃO RECOMENDADA</span>
-                  </div>
-                  <p className="text-red-200 text-sm">
-                    As condições climáticas não são favoráveis para aplicação hoje. Consulte o histórico de previsões.
-                  </p>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         )}
