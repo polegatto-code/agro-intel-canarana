@@ -307,6 +307,57 @@ export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type InsertNotificationLog = typeof notificationLogs.$inferInsert;
 
 /**
+ * Crop catalog — metadados agronômicos por fazenda
+ * Módulo 1 da Fase 5: Base Agronômica
+ */
+export const crops = mysqlTable("crops", {
+  id: int("id").autoincrement().primaryKey(),
+  farmId: int("farmId").notNull(), // FK para farms.id — isolamento multi-fazenda
+
+  // Identificação da cultura
+  name: varchar("name", { length: 64 }).notNull(),  // e.g., 'soja', 'milho'
+  displayName: varchar("displayName", { length: 128 }).notNull(), // e.g., 'Soja (Glycine max)'
+  variety: varchar("variety", { length: 128 }), // Variedade/cultivar opcional
+
+  // Janela de plantio para a região (meses 1-12)
+  plantingWindowStart: int("plantingWindowStart").notNull(), // Mês de início do plantio
+  plantingWindowEnd: int("plantingWindowEnd").notNull(),   // Mês de fim do plantio
+  harvestWindowStart: int("harvestWindowStart").notNull(),  // Mês de início da colheita
+  harvestWindowEnd: int("harvestWindowEnd").notNull(),    // Mês de fim da colheita
+  cycleDays: int("cycleDays").notNull(),                  // Duração média do ciclo em dias
+
+  // Exigências climáticas para pulverização
+  minTempSpray: decimal("minTempSpray", { precision: 5, scale: 2 }).notNull(), // °C mínimo para pulverização
+  maxTempSpray: decimal("maxTempSpray", { precision: 5, scale: 2 }).notNull(), // °C máximo para pulverização
+  minHumiditySpray: int("minHumiditySpray").notNull(),  // % umidade mínima
+  maxHumiditySpray: int("maxHumiditySpray").notNull(),  // % umidade máxima
+  maxWindSpeedSpray: decimal("maxWindSpeedSpray", { precision: 5, scale: 2 }).notNull(), // km/h máximo
+  minDeltaT: decimal("minDeltaT", { precision: 5, scale: 2 }).notNull(), // Delta T mínimo (°C)
+  maxDeltaT: decimal("maxDeltaT", { precision: 5, scale: 2 }).notNull(), // Delta T máximo (°C)
+
+  // Exigências nutricionais (kg/ha por macronutriente)
+  nitrogenKgHa: decimal("nitrogenKgHa", { precision: 8, scale: 2 }),  // N
+  phosphorusKgHa: decimal("phosphorusKgHa", { precision: 8, scale: 2 }), // P2O5
+  potassiumKgHa: decimal("potassiumKgHa", { precision: 8, scale: 2 }), // K2O
+  sulfurKgHa: decimal("sulfurKgHa", { precision: 8, scale: 2 }),     // S
+
+  // Produtividade esperada na região
+  expectedYieldBagHa: decimal("expectedYieldBagHa", { precision: 8, scale: 2 }), // sacas/ha
+
+  // Notas agronômicas livres
+  notes: text("notes"),
+
+  // Status
+  isActive: boolean("isActive").default(true).notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Crop = typeof crops.$inferSelect;
+export type InsertCrop = typeof crops.$inferInsert;
+
+/**
  * Scheduled job tracking
  */
 export const scheduledJobs = mysqlTable("scheduledJobs", {

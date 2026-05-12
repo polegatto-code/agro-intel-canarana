@@ -296,12 +296,161 @@ export const appRouter = router({
       }),
   }),
 
-  healthcheck: router({
+   healthcheck: router({
     check: publicProcedure.query(async () => {
       const { healthCheckService } = await import('./services/healthcheck');
       return await healthCheckService.runHealthCheck();
     }),
   }),
-});
 
+  // ============================================================================
+  // CROPS — Catálogo Agronômico por Fazenda (Fase 5 — Módulo 1)
+  // ============================================================================
+  crops: router({
+    /**
+     * Lista todas as culturas ativas de uma fazenda.
+     */
+    list: protectedProcedure
+      .input(z.object({ farmId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Valida que o usuário tem acesso à fazenda
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === input.farmId)) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado a esta fazenda.' });
+        }
+        return db.getCropsByFarm(input.farmId);
+      }),
+
+    /**
+     * Retorna uma cultura pelo id.
+     */
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const crop = await db.getCropById(input.id);
+        if (!crop) throw new TRPCError({ code: 'NOT_FOUND', message: 'Cultura não encontrada.' });
+        // Valida acesso à fazenda
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === crop.farmId)) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado a esta fazenda.' });
+        }
+        return crop;
+      }),
+
+    /**
+     * Cria ou atualiza uma cultura para uma fazenda.
+     */
+    upsert: protectedProcedure
+      .input(z.object({
+        farmId: z.number(),
+        name: z.string().min(1).max(64),
+        displayName: z.string().min(1).max(128),
+        variety: z.string().max(128).optional(),
+        plantingWindowStart: z.number().min(1).max(12),
+        plantingWindowEnd: z.number().min(1).max(12),
+        harvestWindowStart: z.number().min(1).max(12),
+        harvestWindowEnd: z.number().min(1).max(12),
+        cycleDays: z.number().min(1),
+        minTempSpray: z.number(),
+        maxTempSpray: z.number(),
+        minHumiditySpray: z.number().min(0).max(100),
+        maxHumiditySpray: z.number().min(0).max(100),
+        maxWindSpeedSpray: z.number().min(0),
+        minDeltaT: z.number(),
+        maxDeltaT: z.number(),
+        nitrogenKgHa: z.number().optional(),
+        phosphorusKgHa: z.number().optional(),
+        potassiumKgHa: z.number().optional(),
+        sulfurKgHa: z.number().optional(),
+        expectedYieldBagHa: z.number().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === input.farmId)) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado a esta fazenda.' });
+        }
+        await db.upsertCrop({
+          ...input,
+          minTempSpray: String(input.minTempSpray),
+          maxTempSpray: String(input.maxTempSpray),
+          maxWindSpeedSpray: String(input.maxWindSpeedSpray),
+          minDeltaT: String(input.minDeltaT),
+          maxDeltaT: String(input.maxDeltaT),
+          nitrogenKgHa: input.nitrogenKgHa != null ? String(input.nitrogenKgHa) : null,
+          phosphorusKgHa: input.phosphorusKgHa != null ? String(input.phosphorusKgHa) : null,
+          potassiumKgHa: input.potassiumKgHa != null ? String(input.potassiumKgHa) : null,
+          sulfurKgHa: input.sulfurKgHa != null ? String(input.sulfurKgHa) : null,
+          expectedYieldBagHa: input.expectedYieldBagHa != null ? String(input.expectedYieldBagHa) : null,
+          isActive: true,
+        });
+        return { success: true };
+      }),
+
+    /**
+     * Desativa (soft delete) uma cultura.
+     */
+    deactivate: protectedProcedure
+      .input(z.object({ id: z.number(), farmId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === input.farmId)) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado a esta fazenda.' });
+        }
+        await db.deactivateCrop(input.id, input.farmId);
+        return { success: true };
+      }),
+
+    /**
+     * Analisa condições climáticas para uma cultura específica (Motor Climático Agronômico).
+     */
+    analyzeConditions: protectedProcedure
+      .input(z.object({
+        cropName: z.string(),
+        temperature: z.number(),
+        humidity: z.number(),
+        windSpeed: z.number(),
+        rainProbability: z.number().min(0).max(100).optional(),
+      }))
+      .query(async ({ input }) => {
+        const { analyzeAgronomicConditions } = await import('./services/agronomyService');
+        return analyzeAgronomicConditions(
+          {
+            temperature: input.temperature,
+            humidity: input.humidity,
+            windSpeed: input.windSpeed,
+            rainProbability: input.rainProbability,
+          },
+          input.cropName
+        );
+      }),
+
+    /**
+     * Retorna o status de safra (janela de plantio/colheita) para o mês atual.
+     */
+    seasonStatus: protectedProcedure
+      .input(z.object({ cropName: z.string() }))
+      .query(async ({ input }) => {
+        const { getCropSeasonStatus } = await import('./services/agronomyService');
+        const currentMonth = new Date().getMonth() + 1;
+        return getCropSeasonStatus(input.cropName, currentMonth);
+      }),
+
+    /**
+     * Bootstrap: insere as 5 culturas-padrão para uma fazenda recém-criada.
+     */
+    bootstrapDefaults: protectedProcedure
+      .input(z.object({ farmId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const userFarms = await db.getUserFarms(ctx.user.id);
+        if (!userFarms.find(f => f.id === input.farmId)) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado a esta fazenda.' });
+        }
+        const { getDefaultCropsForFarm } = await import('./services/agronomyService');
+        const defaultCrops = getDefaultCropsForFarm(input.farmId);
+        await db.insertCropsBatch(defaultCrops);
+        return { success: true, count: defaultCrops.length };
+      }),
+  }),
+});
 export type AppRouter = typeof appRouter;

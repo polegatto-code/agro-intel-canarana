@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
+import Crops from "./pages/Crops";
 import DashboardLayout from "./components/DashboardLayout";
 
 function Router() {
@@ -20,6 +21,11 @@ function Router() {
       <Route path={"/settings"}>
         <DashboardLayout>
           <Settings />
+        </DashboardLayout>
+      </Route>
+      <Route path={"/crops"}>
+        <DashboardLayout>
+          <Crops />
         </DashboardLayout>
       </Route>
       <Route path={"/history"}>

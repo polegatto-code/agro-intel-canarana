@@ -1,6 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
+import { getDefaultCropsForFarm } from "../services/agronomyService";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -74,11 +75,19 @@ export function registerOAuthRoutes(app: Express) {
               });
               console.info('[OAuth] Bootstrap: userSettings criado para novo usuário', user.id, 'farm', defaultFarm.id);
             }
+
+            // Bootstrap de culturas padrão (Fase 5 — Módulo 1)
+            const existingCrops = await db.getCropsByFarm(defaultFarm.id);
+            if (existingCrops.length === 0) {
+              const defaultCrops = getDefaultCropsForFarm(defaultFarm.id);
+              await db.insertCropsBatch(defaultCrops);
+              console.info('[OAuth] Bootstrap: culturas padrão criadas para farm', defaultFarm.id, '— total:', defaultCrops.length);
+            }
           }
         }
       } catch (bootstrapError) {
         // Não bloquear login se bootstrap falhar
-        console.warn('[OAuth] Bootstrap de userSettings falhou (não crítico):', bootstrapError);
+        console.warn('[OAuth] Bootstrap falhou (não crítico):', bootstrapError);
       }
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {

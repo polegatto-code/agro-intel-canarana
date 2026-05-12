@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -22,7 +22,10 @@ import {
   Farm,
   FarmUser,
   InsertFarm,
-  InsertFarmUser
+  InsertFarmUser,
+  crops,
+  Crop,
+  InsertCrop
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -751,5 +754,119 @@ export async function getLatestWeatherByFarm(farmId: number): Promise<WeatherLog
   } catch (error) {
     console.error('[Database] Failed to get latest weather by farm:', error);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CROPS — Catálogo Agronômico por Fazenda (Fase 5 — Módulo 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Retorna todas as culturas ativas de uma fazenda.
+ */
+export async function getCropsByFarm(farmId: number): Promise<Crop[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(crops)
+      .where(and(eq(crops.farmId, farmId), eq(crops.isActive, true)))
+      .orderBy(asc(crops.name));
+  } catch (error) {
+    console.error('[Database] Failed to get crops by farm:', error);
+    return [];
+  }
+}
+
+/**
+ * Retorna uma cultura específica pelo id.
+ */
+export async function getCropById(id: number): Promise<Crop | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db.select().from(crops).where(eq(crops.id, id)).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('[Database] Failed to get crop by id:', error);
+    return null;
+  }
+}
+
+/**
+ * Insere ou atualiza uma cultura para uma fazenda (upsert por farmId + name).
+ */
+export async function upsertCrop(data: InsertCrop): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn('[Database] Cannot upsert crop: database not available');
+    return;
+  }
+  try {
+    await db
+      .insert(crops)
+      .values(data)
+      .onDuplicateKeyUpdate({
+        set: {
+          displayName: data.displayName,
+          variety: data.variety,
+          plantingWindowStart: data.plantingWindowStart,
+          plantingWindowEnd: data.plantingWindowEnd,
+          harvestWindowStart: data.harvestWindowStart,
+          harvestWindowEnd: data.harvestWindowEnd,
+          cycleDays: data.cycleDays,
+          minTempSpray: data.minTempSpray,
+          maxTempSpray: data.maxTempSpray,
+          minHumiditySpray: data.minHumiditySpray,
+          maxHumiditySpray: data.maxHumiditySpray,
+          maxWindSpeedSpray: data.maxWindSpeedSpray,
+          minDeltaT: data.minDeltaT,
+          maxDeltaT: data.maxDeltaT,
+          nitrogenKgHa: data.nitrogenKgHa,
+          phosphorusKgHa: data.phosphorusKgHa,
+          potassiumKgHa: data.potassiumKgHa,
+          sulfurKgHa: data.sulfurKgHa,
+          expectedYieldBagHa: data.expectedYieldBagHa,
+          notes: data.notes,
+          isActive: data.isActive,
+        },
+      });
+  } catch (error) {
+    console.error('[Database] Failed to upsert crop:', error);
+    throw error;
+  }
+}
+
+/**
+ * Insere múltiplas culturas de uma vez (bootstrap de fazenda nova).
+ */
+export async function insertCropsBatch(data: InsertCrop[]): Promise<void> {
+  const db = await getDb();
+  if (!db || data.length === 0) return;
+  try {
+    for (const crop of data) {
+      await upsertCrop(crop);
+    }
+  } catch (error) {
+    console.error('[Database] Failed to insert crops batch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Desativa (soft delete) uma cultura de uma fazenda.
+ */
+export async function deactivateCrop(id: number, farmId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db
+      .update(crops)
+      .set({ isActive: false })
+      .where(and(eq(crops.id, id), eq(crops.farmId, farmId)));
+  } catch (error) {
+    console.error('[Database] Failed to deactivate crop:', error);
+    throw error;
   }
 }
