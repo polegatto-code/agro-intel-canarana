@@ -3,18 +3,19 @@
 **Autor:** Manus AI
 **Última atualização:** 12 de maio de 2026
 **Branch base:** `main`
-**Commit base da leitura:** `098cc3933fe452a44229119b591cb5bbad6d193c`
+**Commit base da leitura:** `85e1054`
 
-## Diagnóstico da fase: FASE 5 — MÓDULO 4 IMPLEMENTADO
+## Diagnóstico da fase: FASE 5 — MÓDULOS 4 E 5 CONCLUÍDOS
 
-A Fase 5 — Agro & Mercado avançou com a implementação do Módulo 4. O sistema agora filtra a inteligência de mercado com base nas culturas monitoradas de cada fazenda.
+A Fase 5 — Agro & Mercado foi finalizada com sucesso. O sistema agora possui inteligência de mercado contextualizada e um boletim agronômico completo via Telegram.
 
 | Componente | Estado Atual |
 |---|---|
 | **TypeScript** | ✅ 0 erros (validado com `pnpm check`) |
 | **Build** | ✅ Sucesso (validado com `pnpm build`) |
-| **Mercado** | ✅ Filtragem por culturas monitoradas implementada no Backend e Frontend |
-| **Dashboard** | ✅ Exibição de alertas de mercado contextualizados por cultura |
+| **Mercado** | ✅ Filtragem por culturas monitoradas implementada |
+| **Telegram** | ✅ Boletim Agronômico unificado (Clima + Manejo + Mercado) |
+| **Dashboard** | ✅ Exibição de alertas de mercado contextualizados |
 
 ## Módulos Implementados na Fase 5
 
@@ -28,26 +29,30 @@ A Fase 5 — Agro & Mercado avançou com a implementação do Módulo 4. O siste
 - Integração de Delta T e recomendações de pulverização na UI.
 
 ### Módulo 4: Mercado por Cultura ✅
-- **Filtragem Inteligente**: O backend (`db.getMarketAlerts`) agora suporta filtragem por array de culturas.
-- **Contextualização tRPC**: O router `marketAlerts.list` identifica automaticamente as culturas monitoradas da fazenda ativa para aplicar o filtro.
-- **UI Contextual**: O Dashboard destaca as culturas afetadas em cada alerta e exibe quais culturas estão sendo monitoradas para aquele contexto.
-- **Isolamento**: Alertas irrelevantes para as culturas da fazenda são omitidos da visão principal, reduzindo ruído para o produtor.
+- Filtragem inteligente de alertas de mercado baseada nas culturas monitoradas da fazenda.
+
+### Módulo 5: Relatório Agronômico Telegram ✅
+- **Boletim Unificado**: Nova função `formatAgronomicBulletin` que consolida clima, recomendações de manejo e mercado.
+- **Integração no Scheduler**: O processo de checagem climática agora dispara o boletim completo, respeitando o isolamento multi-fazenda e as culturas monitoradas.
+- **Riqueza de Dados**: O relatório inclui Delta T, score operacional, alertas técnicos e notícias de mercado filtradas.
 
 ## Arquivos Modificados nesta Sessão
 
 | Arquivo | Ação | Descrição |
 |---|---|---|
-| `server/db.ts` | Modificado | Adicionado suporte a filtro de culturas em `getMarketAlerts` |
-| `server/routers.ts` | Modificado | Router `marketAlerts.list` agora aplica filtro de culturas monitoradas |
-| `client/src/pages/Home.tsx` | Modificado | UI do Dashboard atualizada com alertas contextualizados |
-| `docs/context/CURRENT_PHASE.md` | Modificado | Atualização do progresso da Fase 5 |
+| `server/db.ts` | Modificado | Suporte a filtro de culturas em `getMarketAlerts` |
+| `server/routers.ts` | Modificado | Router `marketAlerts.list` com filtros contextuais |
+| `client/src/pages/Home.tsx` | Modificado | Dashboard com alertas contextualizados |
+| `server/services/agronomyService.ts` | Modificado | Adicionada função `formatAgronomicBulletin` |
+| `server/services/scheduler.ts` | Modificado | Integração do novo boletim no fluxo de notificações |
+| `docs/context/CURRENT_PHASE.md` | Modificado | Atualização final da Fase 5 |
 
-## Próxima Sequência Recomendada (Fase 5 — Continuação)
+## Próxima Sequência Recomendada
 
-### Módulo 5: Relatório Agronômico Telegram
-- Boletim diário com Delta T, janela de pulverização e status de safra.
-- Alertas de mercado filtrados por cultura.
-- Integração com scheduler existente.
+### Fase 6 — Expansão e Refinamento
+- **Módulo 1**: Histórico de Delta T e análises sazonais.
+- **Módulo 2**: Integração com APIs de preços de commodities em tempo real.
+- **Módulo 3**: Expansão do RBAC para gerentes e consultores agronômicos.
 
 ## Definição de "Pronto para Continuar"
-O projeto está em estado **Green Build**. A próxima etapa é a implementação do Módulo 5 (Relatório Agronômico Telegram).
+O projeto está em estado **Green Build**. A Fase 5 está 100% concluída.

@@ -3,6 +3,7 @@ import { telegramService } from './telegram';
 import { analyzeWeather, saveWeatherAnalysis } from './weather';
 import { newsCollectorService } from './newsCollector';
 import { newsAnalysisService } from './newsAnalysis';
+import { analyzeAgronomicConditions, formatAgronomicBulletin } from './agronomyService';
 import * as db from '../db';
 
 export interface ScheduleConfig {
@@ -293,9 +294,39 @@ export async function executeWeatherCheckForUser(
 
     await saveWeatherAnalysis(userId, analysis, farmId);
 
-    const message = formatWeatherMessage(analysis);
+    // Buscar fazenda e configurações
+    const farm = await db.getFarmById(farmId);
+    const farmName = farm?.name || 'Fazenda';
+    const farmSettings = await db.getUserSettings(userId, farmId);
 
-    const priority = analysis.overallClassification === 'excelente' ? 'high' : 'normal';
+    // Buscar alertas de mercado recentes filtrados por cultura
+    const monitoredCrops = farmSettings?.monitoredCrops as string[] || ['soja', 'milho'];
+    const marketAlerts = await db.getMarketAlerts(userId, farmId, 3, monitoredCrops);
+
+    // Nova análise agronômica detalhada
+    const agronomicAnalysis = analyzeAgronomicConditions(
+      {
+        temperature: Number(analysis.currentTemp),
+        humidity: analysis.currentHumidity,
+        windSpeed: Number(analysis.currentWindSpeed),
+        rainProbability: 0 // Simplificado para o boletim
+      },
+      farm?.mainCrop || 'soja'
+    );
+
+    const message = formatAgronomicBulletin(
+      farmName,
+      agronomicAnalysis,
+      {
+        temperature: Number(analysis.currentTemp),
+        humidity: analysis.currentHumidity,
+        windSpeed: Number(analysis.currentWindSpeed)
+      },
+      marketAlerts,
+      monitoredCrops
+    );
+
+    const priority = agronomicAnalysis.sprayRecommendation === 'recomendado' ? 'high' : 'normal';
     await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
 
     logger.log({

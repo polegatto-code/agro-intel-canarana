@@ -249,6 +249,60 @@ export function getDefaultCropsForFarm(farmId: number): InsertCrop[] {
   }));
 }
 
+/**
+ * Gera um boletim agronômico formatado para Telegram
+ */
+export function formatAgronomicBulletin(
+  farmName: string,
+  analysis: AgronomicAnalysis,
+  weather: WeatherInput,
+  marketAlerts: any[],
+  monitoredCrops: string[]
+): string {
+  const emoji = analysis.sprayRecommendation === 'recomendado' ? '🟢' : analysis.sprayRecommendation === 'aceitavel' ? '🟡' : '🔴';
+  
+  let message = `${emoji} <b>BOLETIM AGRONÔMICO - ${farmName.toUpperCase()}</b>\n\n`;
+  
+  // Seção de Clima Operacional
+  message += `<b>🌡️ CLIMA OPERACIONAL</b>\n`;
+  message += `• Delta T: <b>${analysis.deltaT.toFixed(1)}°C</b> (${analysis.deltaTStatus.toUpperCase()})\n`;
+  message += `• Temp: ${weather.temperature}°C | UR: ${weather.humidity}%\n`;
+  message += `• Vento: ${weather.windSpeed} km/h\n`;
+  message += `• Risco Chuva: ${analysis.rainRisk.toUpperCase()}\n\n`;
+  
+  // Recomendação
+  message += `<b>🚜 RECOMENDAÇÃO DE MANEJO</b>\n`;
+  message += `• <b>${analysis.sprayRecommendation.toUpperCase()}</b>\n`;
+  message += `• ${analysis.sprayReason}\n\n`;
+  
+  if (analysis.cropSpecificAlerts.length > 0) {
+    message += `<b>⚠️ ALERTAS TÉCNICOS</b>\n`;
+    analysis.cropSpecificAlerts.forEach(alert => {
+      message += `• ${alert}\n`;
+    });
+    message += '\n';
+  }
+  
+  // Seção de Mercado (Filtrado)
+  if (marketAlerts.length > 0) {
+    message += `<b>📈 MERCADO (CULTURAS MONITORADAS)</b>\n`;
+    marketAlerts.forEach(alert => {
+      const impactEmoji = alert.impactLevel === 'high' ? '🔴' : alert.impactLevel === 'medium' ? '🟡' : '🟢';
+      message += `${impactEmoji} <b>${alert.title}</b>\n`;
+      
+      const crops = (alert.affectedCrops as string[]).filter(c => monitoredCrops.includes(c.toLowerCase()));
+      if (crops.length > 0) {
+        message += `<i>Culturas: ${crops.join(', ').toUpperCase()}</i>\n`;
+      }
+      message += `• ${alert.summary.substring(0, 100)}...\n\n`;
+    });
+  }
+  
+  message += `<i>Gerado por AgroIntel Canarana em ${new Date().toLocaleDateString('pt-BR')}</i>`;
+  
+  return message;
+}
+
 // ---------------------------------------------------------------------------
 // MÓDULO 2: MOTOR CLIMÁTICO AGRONÔMICO
 // ---------------------------------------------------------------------------
