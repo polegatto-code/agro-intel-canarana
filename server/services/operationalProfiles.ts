@@ -622,7 +622,7 @@ export function analyzeSeasonalProfiles(
     overallRecommendation = 'cautela';
   }
 
-  const summary = buildSeasonalSummary(seasonalContext, profileResults, overallRecommendation, weather);
+  const summary = formatSeasonalBulletin(seasonalContext, profileResults, overallRecommendation, weather);
 
   return { seasonalContext, profileResults, overallRecommendation, summary };
 }
@@ -631,7 +631,7 @@ export function analyzeSeasonalProfiles(
 // UTILITÁRIOS
 // ---------------------------------------------------------------------------
 
-function buildSeasonalSummary(
+export function formatSeasonalBulletin(
   context: SeasonalContext,
   results: ProfileAnalysisResult[],
   overall: string,

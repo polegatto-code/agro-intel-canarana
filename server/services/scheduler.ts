@@ -4,6 +4,10 @@ import { analyzeWeather, saveWeatherAnalysis } from './weather';
 import { newsCollectorService } from './newsCollector';
 import { newsAnalysisService } from './newsAnalysis';
 import { analyzeAgronomicConditions, formatAgronomicBulletin } from './agronomyService';
+import { weatherConsensusEngine } from './weatherConsensus';
+import { getCurrentSeasonalPeriod, analyzeSeasonalProfiles, formatSeasonalBulletin } from './operationalProfiles';
+import { revalidationScheduler, revalidationStateManager, shouldSendAlert } from './revalidationEngine';
+import { interpretMarketEvent, generateMarketIntelligenceBulletin, isMarketEventAlertWorthy } from './marketIntelligence';
 import * as db from '../db';
 
 export interface ScheduleConfig {
@@ -79,19 +83,20 @@ class Scheduler {
   }
 
   /**
-   * Schedule weather check at specific hour
+   * Schedule weather check using adaptive revalidation engine (Fase 7/8)
    */
-  private scheduleWeatherCheck(hour: number): void {
-    const checkTime = () => {
-      const now = new Date();
-      return now.getHours() === hour && now.getMinutes() === 0;
-    };
-
-    this.weatherCheckInterval = setInterval(async () => {
-      if (checkTime()) {
-        await this.executeWeatherCheck();
-      }
-    }, 60000); // Check every minute
+  private scheduleWeatherCheck(_hour: number): void {
+    // Inicia o motor de revalidação inteligente
+    revalidationScheduler.start(async (hour, minute, label) => {
+      logger.log({
+        service: 'scheduler',
+        action: 'revalidation_trigger',
+        level: 'info',
+        status: 'pending',
+        message: `Adaptive revalidation triggered: ${label} (${hour}:${minute})`,
+      });
+      await this.executeWeatherCheck();
+    });
   }
 
   /**
@@ -322,54 +327,123 @@ export async function executeWeatherCheckForUser(
   });
 
   try {
-    const analysis = await analyzeWeather(
-      userId,
-      minHumidity,
-      maxHumidity,
-      maxTemperature,
-      maxWindSpeed,
-      process.env.OPENWEATHER_API_KEY,
-      latitude,
-      longitude,
-      farmId
+    // 1. Obter clima via Consenso Multi-API (Fase 7)
+    const consensus = await weatherConsensusEngine.fetchConsensus(latitude, longitude);
+    
+    // 2. Obter contexto sazonal regional (Fase 7)
+    const seasonalContext = getCurrentSeasonalPeriod(new Date().getMonth() + 1);
+    
+    // 3. Análise detalhada por perfis operacionais (Fase 7)
+    const seasonalAnalysis = analyzeSeasonalProfiles(
+      {
+        temperature: consensus.temperature,
+        humidity: consensus.humidity,
+        windSpeed: consensus.windSpeed,
+        rainProbabilityNow: consensus.rainProbabilityNow,
+        rainProbability24h: consensus.rainProbability24h,
+        rainProbability48h: consensus.rainProbability48h,
+        rainMmForecast3h: consensus.rainMmForecast3h,
+        rainMmForecast24h: consensus.rainMmForecast24h
+      }
     );
 
-    await saveWeatherAnalysis(userId, analysis, farmId);
+    // 4. Salvar análise (compatibilidade com legado)
+    // Usamos o primeiro perfil dominante para o score legado
+    const mainProfile = seasonalAnalysis.profileResults[0];
+    const legacyAnalysis = {
+      userId,
+      farmId,
+      currentTemp: consensus.temperature.toString(),
+      currentHumidity: consensus.humidity,
+      currentWindSpeed: consensus.windSpeed.toString(),
+      overallClassification: seasonalAnalysis.overallRecommendation,
+      score: mainProfile?.score || 0,
+      isApplicationRecommended: seasonalAnalysis.overallRecommendation === 'operar' || seasonalAnalysis.overallRecommendation === 'cautela',
+      applicationWindowStart: 0, // Não usado no novo motor
+      applicationWindowEnd: 0,   // Não usado no novo motor
+      notes: mainProfile?.activeRisks.map(r => `${r.risk.toUpperCase()}: ${r.detail}`) || [],
+      timestamp: new Date()
+    };
+    await saveWeatherAnalysis(userId, legacyAnalysis as any, farmId);
 
-    // Buscar fazenda e configurações
+    // 5. Buscar fazenda e configurações
     const farm = await db.getFarmById(farmId);
     const farmName = farm?.name || 'Fazenda';
     const farmSettings = await db.getUserSettings(userId, farmId);
-
-    // Buscar alertas de mercado recentes filtrados por cultura
     const monitoredCrops = farmSettings?.monitoredCrops as string[] || ['soja', 'milho'];
-    const marketAlerts = await db.getMarketAlerts(userId, farmId, 3, monitoredCrops);
 
-    // Nova análise agronômica detalhada
-    const agronomicAnalysis = analyzeAgronomicConditions(
+    // 6. Verificar se deve enviar alerta (Anti-Spam Fase 7)
+    const farmState = revalidationStateManager.getState(farmId);
+    // Para o anti-spam, usamos o perfil de maior score ou o primeiro disponível
+    const bestProfile = seasonalAnalysis.profileResults.sort((a, b) => b.score - a.score)[0] || {
+      score: 0,
+      recommendation: 'nao-recomendado',
+      activeRisks: [],
+      deltaT: 0,
+      deltaTStatus: 'critico'
+    };
+
+    const decision = shouldSendAlert(
+      farmState,
+      bestProfile as any,
       {
-        temperature: Number(analysis.currentTemp),
-        humidity: analysis.currentHumidity,
-        windSpeed: Number(analysis.currentWindSpeed),
-        rainProbability: 0 // Simplificado para o boletim
+        temperature: consensus.temperature,
+        humidity: consensus.humidity,
+        windSpeed: consensus.windSpeed,
+        rainProbability24h: consensus.rainProbability24h
       },
-      farm?.mainCrop || 'soja'
+      seasonalContext
     );
 
-    const message = formatAgronomicBulletin(
-      farmName,
-      agronomicAnalysis,
-      {
-        temperature: Number(analysis.currentTemp),
-        humidity: analysis.currentHumidity,
-        windSpeed: Number(analysis.currentWindSpeed)
-      },
-      marketAlerts,
-      monitoredCrops
-    );
+    if (decision.shouldAlert) {
+      // Buscar alertas de mercado recentes para o boletim
+      const marketAlerts = await db.getMarketAlerts(userId, farmId, 2, monitoredCrops);
 
-    const priority = agronomicAnalysis.sprayRecommendation === 'recomendado' ? 'high' : 'normal';
-    await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
+      // Formatar boletim sazonal (Fase 7)
+      let message = formatSeasonalBulletin(
+        seasonalContext,
+        seasonalAnalysis.profileResults,
+        seasonalAnalysis.overallRecommendation,
+        {
+          temperature: consensus.temperature,
+          humidity: consensus.humidity,
+          windSpeed: consensus.windSpeed,
+          rainProbabilityNow: consensus.rainProbabilityNow,
+          rainProbability24h: consensus.rainProbability24h,
+          rainProbability48h: consensus.rainProbability48h,
+          rainMmForecast3h: consensus.rainMmForecast3h,
+          rainMmForecast24h: consensus.rainMmForecast24h
+        }
+      );
+
+      // Adicionar cabeçalho da fazenda e alertas de mercado (Fase 7)
+      message = `🚜 <b>${farmName.toUpperCase()}</b>\n\n` + message;
+      
+      if (marketAlerts.length > 0) {
+        message += `<b>📊 MERCADO (${monitoredCrops.join('/')})</b>\n`;
+        marketAlerts.forEach(alert => {
+          message += `• ${alert.title}\n`;
+        });
+      }
+
+      const priority = decision.priority === 'high' ? 'high' : 'normal';
+      await telegramService.sendMessage(telegramToken, telegramChatId, message, priority);
+      
+      // Atualizar estado de alerta
+      revalidationStateManager.updateAfterAlert(farmId);
+    }
+
+    // Atualizar estado de revalidação
+    revalidationStateManager.updateAfterCheck(
+      farmId,
+      bestProfile as any,
+      {
+        temperature: consensus.temperature,
+        humidity: consensus.humidity,
+        windSpeed: consensus.windSpeed,
+        rainProbability24h: consensus.rainProbability24h
+      }
+    );
 
     const duration = Date.now() - startTime;
     logger.log({
@@ -381,7 +455,7 @@ export async function executeWeatherCheckForUser(
       farmId,
       duration,
       message: 'Weather check job completed successfully for farm',
-      metadata: { classification: analysis.overallClassification },
+      metadata: { classification: seasonalAnalysis.overallRecommendation },
     });
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -464,6 +538,7 @@ export async function executeMarketAnalysisForUser(
   });
 
   try {
+    // 1. Coletar notícias brutas (legado)
     const rawNews = await newsCollectorService.collectNews();
     
     if (rawNews.length === 0) {
@@ -481,12 +556,52 @@ export async function executeMarketAnalysisForUser(
       return;
     }
 
+    // 2. Salvar no banco (legado)
     await newsCollectorService.saveNewsToDatabase(userId, farmId, rawNews);
 
-    const analysis = await newsAnalysisService.analyzeNews(rawNews);
+    // 3. Interpretar cada evento com o novo motor (Fase 7/8)
+    const farmSettings = await db.getUserSettings(userId, farmId);
+    const monitoredCrops = farmSettings?.monitoredCrops as string[] || ['soja', 'milho'];
+    
+    const analyses = rawNews.map((news, index) => interpretMarketEvent({
+      id: `news-${Date.now()}-${index}`,
+      title: news.title,
+      summary: news.summary,
+      category: (news.category as any) || 'commodities_agricolas',
+      source: news.source,
+      publishedAt: new Date()
+    }, monitoredCrops));
 
-    const message = newsAnalysisService.generateTelegramMessage(analysis);
-    await telegramService.sendMessage(telegramToken, telegramChatId, message, 'normal');
+    // 4. Gerar boletim interpretativo consolidado (Fase 7/8)
+    const bulletin = generateMarketIntelligenceBulletin(analyses, monitoredCrops);
+
+    // 5. Enviar apenas se houver eventos relevantes (Anti-Spam Mercado)
+    const hasRelevantEvents = analyses.some(a => isMarketEventAlertWorthy(a));
+    
+    if (hasRelevantEvents) {
+      await telegramService.sendMessage(telegramToken, telegramChatId, bulletin.telegramMessage, 'normal');
+      
+      logger.log({
+        service: 'market_job',
+        action: 'send_bulletin',
+        level: 'info',
+        status: 'success',
+        userId,
+        farmId,
+        message: 'Market intelligence bulletin sent',
+        metadata: { sentiment: bulletin.overallMarketSentiment, eventCount: analyses.length }
+      });
+    } else {
+      logger.log({
+        service: 'market_job',
+        action: 'skip_bulletin',
+        level: 'info',
+        status: 'success',
+        userId,
+        farmId,
+        message: 'Market bulletin skipped: no high-impact events',
+      });
+    }
 
     const duration = Date.now() - startTime;
     logger.log({
@@ -498,7 +613,6 @@ export async function executeMarketAnalysisForUser(
       farmId,
       duration,
       message: 'Market analysis job completed',
-      metadata: { newsCount: rawNews.length, riskLevel: analysis.riskLevel }
     });
   } catch (error) {
     const duration = Date.now() - startTime;

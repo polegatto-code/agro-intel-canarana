@@ -1,8 +1,8 @@
 # MASTER_CONTEXT — AgroIntel Canarana
 
 **Autor:** Manus AI
-**Última atualização:** 12 de maio de 2026 — Fase 7
-**Base de leitura:** branch `main` — Fase 7: Motor Agronômico Operacional Autônomo implementado
+**Última atualização:** 12 de maio de 2026 — Fase 8
+**Base de leitura:** branch `main` — Fase 8: Integração e Ativação Operacional concluída
 **Finalidade:** servir como ponto de entrada técnico persistente para futuras sessões de IA, reduzindo releitura do repositório e preservando decisões arquiteturais, estado real da implementação, pendências críticas e regras de continuidade.
 
 > Este arquivo deve ser lido antes de qualquer nova implementação. Ele não substitui o código-fonte; ele compacta o contexto arquitetural essencial e aponta os arquivos que devem ser consultados somente quando uma alteração exigir detalhe local.
@@ -112,20 +112,21 @@ A informação mais valiosa para futuras sessões é que o repositório não est
 | `userSettings.farmId` é obrigatório, mas `upsertUserSettings` insere sem `farmId`. | `schema.ts`, `server/db.ts`. | Falha de insert após migration aplicada. | Refatorar settings para receber fazenda ativa. |
 | `scheduledJobs.farmId` é obrigatório, mas `getOrCreateScheduledJob` insere sem `farmId`. | `schema.ts`, `server/db.ts`. | Falha de insert de jobs. | Tornar job por fazenda ou flexibilizar schema com justificativa. |
 | Router tenta `db.updateUser`, mas função não foi observada em `server/db.ts`. | `server/routers.ts`, `server/db.ts`. | Erro de TypeScript/runtime em seleção de fazenda ativa. | Implementar helper ou alterar router. |
-| `cronJobs.ts` chama assinatura antiga de clima. | `cronJobs.ts`, `scheduler.ts`. | Erro de TypeScript/runtime se serviço for compilado/executado. | Atualizar ou descontinuar `cronJobService`. |
+| `cronJobs.ts` removido. | N/A | Dívida técnica eliminada na Fase 8. | Resolvido. |
 | `getWeatherCacheByFarm` usa `and(eq(...), desc(...))`, misturando predicado com ordenação. | `server/db.ts`. | Query incorreta ou erro de tipagem. | Separar `.where(eq(...)).orderBy(desc(...))`. |
 | Mercado ainda é usuário-cêntrico enquanto schema exige `farmId`. | `scheduler.ts`, `newsCollector.ts`, `schema.ts`. | Inserts podem falhar ou dados não isolados. | Definir se mercado é global por usuário ou contextualizado por fazenda; ajustar schema/serviço. |
 
-## Novos serviços — Fase 7 (Motor Agronômico Operacional Autônomo)
+## Motores de Inteligência — Fase 8 (Operação Autônoma)
 
-A Fase 7 adicionou quatro novos serviços que formam o núcleo do motor autônomo. Eles ainda não estão integrados ao fluxo principal do `scheduler.ts` — essa integração é a Fase 8.
+O sistema agora opera de forma autônoma com os motores integrados no `scheduler.ts` e ativados no bootstrap (`server/_core/index.ts`).
 
-| Arquivo | Responsabilidade | Integrar em |
+| Serviço | Estado | Integração |
 |---|---|---|
-| `server/services/operationalProfiles.ts` | 10 perfis operacionais (pré-emergente, fungicida, etc.) + calendário sazonal regional (5 períodos) + análise por perfil com score 0-100. | `scheduler.ts` → `executeWeatherCheckForUser` |
-| `server/services/revalidationEngine.ts` | Schedule adaptativo (05h–09h: horário, 09h–19h: 2h) + anti-spam por fazenda (cooldown, thresholds, entressafra). | `scheduler.ts` → substituir `scheduleWeatherCheck` |
-| `server/services/weatherConsensus.ts` | Consenso multi-API (OpenWeatherMap ativo, 5 stubs prontos) + média ponderada por confiança + fallback + divergência. | `scheduler.ts` → `executeWeatherCheckForUser` |
-| `server/services/marketIntelligence.ts` | Interpretação de impacto para 12 categorias de mercado + boletim Telegram interpretativo + anti-spam de mercado. | `scheduler.ts` → `executeMarketAnalysisForUser` |
+| **Agronômico** | ✅ Ativo | Perfis operacionais e calendário sazonal regional integrados. |
+| **Revalidação** | ✅ Ativo | Schedule adaptativo (05h-19h) e anti-spam por fazenda operacionais. |
+| **Climático** | ✅ Ativo | Consenso Multi-API (OpenWeather ativo) com fallback. |
+| **Mercado** | ✅ Ativo | Inteligência interpretativa e boletins de impacto econômico. |
+| **Bootstrap** | ✅ Ativo | Scheduler inicia automaticamente no startup do servidor. |
 
 ## Regras de ouro
 

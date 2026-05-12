@@ -9,6 +9,8 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import healthRoutes from "../routes/health";
+import { scheduler } from "../services/scheduler";
+import { logger } from "../services/logger";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -63,6 +65,32 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // Iniciar o Scheduler Operacional Autônomo (Fase 8)
+    try {
+      scheduler.start({
+        weatherCheckHour: 5, // Relatório inicial às 05:00
+        marketAlertHour: 8,  // Alerta de mercado às 08:00
+        urgentAlertCheckInterval: 30 // Checagem urgente a cada 30min
+      });
+      
+      logger.log({
+        service: 'bootstrap',
+        action: 'scheduler_start',
+        level: 'info',
+        status: 'success',
+        message: 'Operational Scheduler started successfully during bootstrap'
+      });
+    } catch (error) {
+      logger.log({
+        service: 'bootstrap',
+        action: 'scheduler_start',
+        level: 'error',
+        status: 'failed',
+        message: 'Failed to start Operational Scheduler during bootstrap',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 }
 
