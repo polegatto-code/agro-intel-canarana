@@ -1,8 +1,8 @@
 # MASTER_CONTEXT — AgroIntel Canarana
 
 **Autor:** Manus AI
-**Última atualização:** 12 de maio de 2026
-**Base de leitura:** branch `main`, commit `564b5ed35811ef7e431d1b00909c6132e909b814` (`feat: proteção de rate limit para OpenWeatherMap API`)
+**Última atualização:** 12 de maio de 2026 — Fase 7
+**Base de leitura:** branch `main` — Fase 7: Motor Agronômico Operacional Autônomo implementado
 **Finalidade:** servir como ponto de entrada técnico persistente para futuras sessões de IA, reduzindo releitura do repositório e preservando decisões arquiteturais, estado real da implementação, pendências críticas e regras de continuidade.
 
 > Este arquivo deve ser lido antes de qualquer nova implementação. Ele não substitui o código-fonte; ele compacta o contexto arquitetural essencial e aponta os arquivos que devem ser consultados somente quando uma alteração exigir detalhe local.
@@ -115,6 +115,17 @@ A informação mais valiosa para futuras sessões é que o repositório não est
 | `cronJobs.ts` chama assinatura antiga de clima. | `cronJobs.ts`, `scheduler.ts`. | Erro de TypeScript/runtime se serviço for compilado/executado. | Atualizar ou descontinuar `cronJobService`. |
 | `getWeatherCacheByFarm` usa `and(eq(...), desc(...))`, misturando predicado com ordenação. | `server/db.ts`. | Query incorreta ou erro de tipagem. | Separar `.where(eq(...)).orderBy(desc(...))`. |
 | Mercado ainda é usuário-cêntrico enquanto schema exige `farmId`. | `scheduler.ts`, `newsCollector.ts`, `schema.ts`. | Inserts podem falhar ou dados não isolados. | Definir se mercado é global por usuário ou contextualizado por fazenda; ajustar schema/serviço. |
+
+## Novos serviços — Fase 7 (Motor Agronômico Operacional Autônomo)
+
+A Fase 7 adicionou quatro novos serviços que formam o núcleo do motor autônomo. Eles ainda não estão integrados ao fluxo principal do `scheduler.ts` — essa integração é a Fase 8.
+
+| Arquivo | Responsabilidade | Integrar em |
+|---|---|---|
+| `server/services/operationalProfiles.ts` | 10 perfis operacionais (pré-emergente, fungicida, etc.) + calendário sazonal regional (5 períodos) + análise por perfil com score 0-100. | `scheduler.ts` → `executeWeatherCheckForUser` |
+| `server/services/revalidationEngine.ts` | Schedule adaptativo (05h–09h: horário, 09h–19h: 2h) + anti-spam por fazenda (cooldown, thresholds, entressafra). | `scheduler.ts` → substituir `scheduleWeatherCheck` |
+| `server/services/weatherConsensus.ts` | Consenso multi-API (OpenWeatherMap ativo, 5 stubs prontos) + média ponderada por confiança + fallback + divergência. | `scheduler.ts` → `executeWeatherCheckForUser` |
+| `server/services/marketIntelligence.ts` | Interpretação de impacto para 12 categorias de mercado + boletim Telegram interpretativo + anti-spam de mercado. | `scheduler.ts` → `executeMarketAnalysisForUser` |
 
 ## Regras de ouro
 
