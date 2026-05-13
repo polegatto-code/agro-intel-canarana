@@ -242,16 +242,16 @@ function inferImpactFromText(
   let direction: ImpactDirection = 'neutro';
   let magnitude: ImpactMagnitude = 'baixo';
 
-  // Para commodities: alta = positivo para receita
+    // Para commodities: alta = positivo para receita
   // Para insumos: alta = negativo para custo
-  const isInputCategory = ['fertilizantes', 'defensivos', 'sementes', 'energia_combustivel', 'logistica_frete'].includes(category);
+  const isInputCategory = ['fertilizantes', 'defensivos', 'sementes', 'energia_combustivel', 'logistica_frete', 'credito_rural'].includes(category);
   const isCommodityCategory = ['commodities_agricolas', 'cambio_dolar'].includes(category);
 
   if (negativeHighWords.some((w) => lower.includes(w))) {
-    direction = isInputCategory ? 'negativo' : isCommodityCategory ? 'incerto' : 'negativo';
+    direction = isInputCategory ? 'negativo' : isCommodityCategory ? 'positivo' : 'negativo';
     magnitude = 'critico';
   } else if (positiveHighWords.some((w) => lower.includes(w))) {
-    direction = isCommodityCategory ? 'positivo' : isInputCategory ? 'negativo' : 'positivo';
+    direction = isInputCategory ? 'negativo' : isCommodityCategory ? 'positivo' : 'positivo';
     magnitude = 'alto';
   } else if (negativeMedWords.some((w) => lower.includes(w))) {
     direction = isInputCategory ? 'negativo' : isCommodityCategory ? 'positivo' : 'negativo';
@@ -259,6 +259,14 @@ function inferImpactFromText(
   } else if (positiveMedWords.some((w) => lower.includes(w))) {
     direction = isInputCategory ? 'positivo' : isCommodityCategory ? 'negativo' : 'positivo';
     magnitude = 'moderado';
+  }
+
+  // Refinamento específico para Dólar: Impacto misto
+  if (category === 'cambio_dolar') {
+    if (lower.includes('alta') || lower.includes('subida') || lower.includes('valorização')) {
+      direction = 'neutro'; // Dólar alto ajuda venda mas encarece insumo
+      magnitude = 'alto';
+    }
   } else {
     direction = 'neutro';
     magnitude = 'baixo';
@@ -495,13 +503,24 @@ function buildMarketTelegramMessage(
 
 /**
  * Determina se um evento de mercado é relevante o suficiente para gerar alerta.
- * Implementa lógica anti-spam para mercado.
+ * Refinado para reduzir ruído e focar em impacto real.
  */
 export function isMarketEventAlertWorthy(analysis: MarketImpactAnalysis): boolean {
   // Sempre alertar para eventos críticos
   if (analysis.impactMagnitude === 'critico') return true;
-  // Alertar para eventos de alto impacto com direção clara
-  if (analysis.impactMagnitude === 'alto' && analysis.impactDirection !== 'neutro') return true;
-  // Não alertar para eventos baixos ou neutros
+
+  // Alertar para eventos de alto impacto se afetarem as culturas monitoradas
+  if (analysis.impactMagnitude === 'alto' && analysis.affectedCrops.length > 0) return true;
+
+  // Alertas moderados negativos só para categorias críticas (Insumos/Diesel)
+  const criticalCategories: MarketCategory[] = ['fertilizantes', 'energia_combustivel', 'defensivos', 'cambio_dolar'];
+  if (
+    analysis.impactMagnitude === 'moderado' && 
+    analysis.impactDirection === 'negativo' && 
+    criticalCategories.includes(analysis.category)
+  ) {
+    return true;
+  }
+
   return false;
 }
