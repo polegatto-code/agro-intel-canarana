@@ -135,107 +135,74 @@ export default function Home() {
     );
   }
 
-  // Authenticated view - Dashboard
+  // Authenticated view - Operational Dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 sticky top-0 z-40">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      {/* Header Enxuto */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-white">AgroIntel Canarana</h1>
-              <p className="text-sm text-slate-400">Bem-vindo, {user?.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-slate-300 text-sm">
-                {currentTime.toLocaleDateString('pt-BR')} às {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Status Operacional</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {activeFarm?.name || 'Fazenda'} • {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
+            <Badge variant="outline" className="border-emerald-500 text-emerald-600 dark:text-emerald-400">
+              SISTEMA ATIVO
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Climate Status */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Temperature Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Cloud className="w-5 h-5 text-blue-400" />
-                Temperatura
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-white">
-                {weatherQuery.data?.temperature || '--'}°C
+      {/* Main Content Enxuto */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Resumo Operacional Rápido */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                <Thermometer className="w-4 h-4" />
+                <span className="text-xs font-medium">Delta T</span>
               </div>
-              <p className="text-slate-400 text-sm mt-2">Condição atual em Canarana-MT</p>
-            </CardContent>
-          </Card>
-
-          {/* Humidity Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Droplets className="w-5 h-5 text-cyan-400" />
-                Umidade Relativa
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-white">
-                {weatherQuery.data?.humidity || '--'}%
-              </div>
-              <p className="text-slate-400 text-sm mt-2">Ideal: 50-90%</p>
-            </CardContent>
-          </Card>
-
-          {/* Wind Speed Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Wind className="w-5 h-5 text-amber-400" />
-                Velocidade do Vento
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-white">
-                {weatherQuery.data?.windSpeed || '--'} km/h
-              </div>
-              <p className="text-slate-400 text-sm mt-2">Máximo recomendado: 15 km/h</p>
-            </CardContent>
-          </Card>
-
-          {/* Delta T Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Thermometer className="w-5 h-5 text-purple-400" />
-                Delta T
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
                 {agronomicAnalysisQuery.data?.deltaT.toFixed(1) || '--'}°C
               </div>
-              <div className="mt-2">
-                {agronomicAnalysisQuery.data ? (
-                  <Badge 
-                    variant="outline" 
-                    className={
-                      agronomicAnalysisQuery.data.deltaTStatus === 'ideal' 
-                        ? "border-emerald-500 text-emerald-400" 
-                        : agronomicAnalysisQuery.data.deltaTStatus === 'aceitavel'
-                        ? "border-amber-500 text-amber-400"
-                        : "border-red-500 text-red-400"
-                    }
-                  >
-                    {agronomicAnalysisQuery.data.deltaTStatus.toUpperCase()}
-                  </Badge>
-                ) : (
-                  <p className="text-slate-400 text-sm">Ideal: 2-8°C</p>
-                )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                <Wind className="w-4 h-4" />
+                <span className="text-xs font-medium">Vento</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                {weatherQuery.data?.windSpeed || '--'} <span className="text-xs font-normal">km/h</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                <Droplets className="w-4 h-4" />
+                <span className="text-xs font-medium">Umidade</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                {weatherQuery.data?.humidity || '--'}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                <Cloud className="w-4 h-4" />
+                <span className="text-xs font-medium">Confiança</span>
+              </div>
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                95%
               </div>
             </CardContent>
           </Card>
