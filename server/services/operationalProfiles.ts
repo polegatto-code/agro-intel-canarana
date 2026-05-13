@@ -399,21 +399,21 @@ export function analyzeProfileConditions(
     deltaTStatus = 'ideal';
   }
 
-  // --- Vento ---
+  // --- Vento: Deriva Contextualizada ---
   if (weather.windSpeed > config.maxWindSpeed) {
-    const severity = weather.windSpeed > config.maxWindSpeed * 1.5 ? 'critico' : 'alto';
+    const isExtreme = weather.windSpeed > config.maxWindSpeed * 1.5;
     activeRisks.push({
       risk: 'deriva',
-      severity,
-      detail: `Vento ${weather.windSpeed} km/h acima do limite (${config.maxWindSpeed} km/h) para ${config.label}.`,
+      severity: isExtreme ? 'critico' : 'alto',
+      detail: `Vento ${weather.windSpeed} km/h: ${isExtreme ? 'Impossibilita' : 'Dificulta'} aplicação segura. Risco de deriva para áreas vizinhas.`,
     });
-    alerts.push(`💨 Vento crítico (${weather.windSpeed} km/h): risco de deriva. Limite: ${config.maxWindSpeed} km/h.`);
-    score -= severity === 'critico' ? 40 : 25;
-  } else if (weather.windSpeed > config.maxWindSpeed * 0.8) {
+    alerts.push(`💨 Vento ${isExtreme ? 'excessivo' : 'forte'} (${weather.windSpeed} km/h): ${isExtreme ? 'interromper' : 'evitar'} aplicação.`);
+    score -= isExtreme ? 60 : 40;
+  } else if (weather.windSpeed < 3) {
     activeRisks.push({
-      risk: 'deriva',
+      risk: 'inversao_termica',
       severity: 'moderado',
-      detail: `Vento ${weather.windSpeed} km/h próximo ao limite (${config.maxWindSpeed} km/h). Monitorar.`,
+      detail: 'Vento muito baixo (< 3 km/h): risco de inversão térmica e deposição irregular.',
     });
     score -= 10;
   }
@@ -454,16 +454,17 @@ export function analyzeProfileConditions(
     score -= 10;
   }
 
-  // --- Risco de Lavagem (chuva próxima) ---
+  // --- Chuva: Lavagem e Incorporação Contextualizada ---
   if (config.requiresDryPeriodAfterHours > 0) {
-    if (weather.rainProbabilityNow > 50) {
+    if (weather.rainProbabilityNow > 30) {
+      const severity = weather.rainProbabilityNow > 60 ? 'critico' : 'alto';
       activeRisks.push({
         risk: 'lavagem',
-        severity: 'critico',
-        detail: `Chuva iminente (${weather.rainProbabilityNow}% nas próximas 3h). ${config.label} exige ${config.requiresDryPeriodAfterHours}h sem chuva após aplicação.`,
+        severity,
+        detail: `Chuva iminente (${weather.rainProbabilityNow}%): impede a secagem e absorção foliar. Exige ${config.requiresDryPeriodAfterHours}h de tempo seco.`,
       });
-      alerts.push(`🌧️ Chuva iminente (${weather.rainProbabilityNow}%): risco de lavagem. Não aplicar.`);
-      score -= 40;
+      alerts.push(`🌧️ Risco de lavagem (${weather.rainProbabilityNow}%): ${severity === 'critico' ? 'não aplicar' : 'evitar'}.`);
+      score -= severity === 'critico' ? 70 : 40;
     } else if (weather.rainProbability24h > 60 && config.requiresDryPeriodAfterHours >= 6) {
       activeRisks.push({
         risk: 'lavagem',
@@ -485,6 +486,14 @@ export function analyzeProfileConditions(
       });
       alerts.push(`☀️ Sem chuva prevista (${weather.rainProbability48h}% em 48h): incorporação do pré-emergente comprometida.`);
       score -= 15;
+    } else if (weather.rainProbabilityNow > 30 && weather.rainProbabilityNow <= 70 && weather.rainMmForecast3h <= 20) {
+      // Bônus para incorporação favorável
+      score += 10;
+      activeRisks.push({
+        risk: 'lavagem',
+        severity: 'baixo',
+        detail: 'Chuva leve prevista: favorável para incorporação do produto no solo.',
+      });
     } else if (weather.rainProbabilityNow > 70 && weather.rainMmForecast3h > config.washRiskRainMm) {
       activeRisks.push({
         risk: 'lavagem',

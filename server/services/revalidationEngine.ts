@@ -135,12 +135,12 @@ export function getNextRevalidationTime(currentHour: number, currentMinute: numb
 // ---------------------------------------------------------------------------
 
 const DEFAULT_THRESHOLDS: AlertThresholds = {
-  minScoreChangeTrigger: 20,
-  minWindChangeTrigger: 5,
-  minTempChangeTrigger: 3,
-  minHumidityChangeTrigger: 10,
-  rainAlertThreshold: 50,
-  cooldownMinutes: 90,
+  minScoreChangeTrigger: 30, // Aumentado de 20 para 30 para reduzir ruído
+  minWindChangeTrigger: 8,  // Aumentado de 5 para 8
+  minTempChangeTrigger: 5,  // Aumentado de 3 para 5
+  minHumidityChangeTrigger: 15, // Aumentado de 10 para 15
+  rainAlertThreshold: 60,   // Aumentado de 50 para 60
+  cooldownMinutes: 180,     // Aumentado de 90 para 180 (3h) para evitar fadiga
 };
 
 /**
@@ -186,11 +186,13 @@ export function shouldSendAlert(
     }
   }
 
-  // Sem estado anterior: primeiro alerta do dia
+  // Sem estado anterior: primeiro alerta do dia (só se for horário de relatório inicial)
+  const currentHour = new Date().getHours();
   if (!farmState.lastScore || !farmState.lastRecommendation || !farmState.lastWeatherSnapshot) {
+    const isEarlyMorning = currentHour >= 5 && currentHour <= 7;
     return {
-      shouldAlert: true,
-      reason: 'Primeiro relatório do dia.',
+      shouldAlert: isEarlyMorning,
+      reason: isEarlyMorning ? 'Relatório matinal inicial.' : 'Primeira checagem do ciclo (silenciosa).',
       alertType: 'routine',
       priority: 'normal',
     };
