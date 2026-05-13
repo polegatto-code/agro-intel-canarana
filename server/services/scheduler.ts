@@ -454,8 +454,17 @@ export async function executeWeatherCheckForUser(
       userId,
       farmId,
       duration,
-      message: 'Weather check job completed successfully for farm',
-      metadata: { classification: seasonalAnalysis.overallRecommendation },
+      message: `Weather check completed: ${seasonalAnalysis.overallRecommendation.toUpperCase()}`,
+      metadata: { 
+        classification: seasonalAnalysis.overallRecommendation,
+        seasonalPeriod: seasonalContext.period,
+        score: bestProfile.score,
+        temp: consensus.temperature,
+        wind: consensus.windSpeed,
+        humidity: consensus.humidity,
+        decision: decision.shouldAlert ? 'alert_sent' : 'suppressed_by_antispam',
+        reason: decision.reason
+      },
     });
   } catch (error) {
     const duration = Date.now() - startTime;
