@@ -1,59 +1,53 @@
 # CURRENT_PHASE — Fase atual do AgroIntel Canarana
 
 **Autor:** Manus AI
-**Última atualização:** 12 de maio de 2026
+**Última atualização:** 13 de maio de 2026
 **Branch base:** `main`
 
-## Diagnóstico da fase: FASE 8 — INTEGRAÇÃO E ATIVAÇÃO OPERACIONAL
+## Diagnóstico da fase: FASE 9 — REFINAMENTO OPERACIONAL E UX ENXUTA
 
-A Fase 8 concluiu a integração dos motores de inteligência criados na Fase 7 ao fluxo principal do sistema. O AgroIntel Canarana agora opera de forma autônoma, com agendamento adaptativo, consenso climático multi-API e inteligência de mercado interpretativa.
+A Fase 9 focou em elevar a qualidade da inteligência agronômica e de mercado, reduzir o ruído de notificações (anti-spam) e simplificar a interface do usuário para um dashboard operacional minimalista e eficiente.
 
 | Componente | Estado Atual |
 |---|---|
 | **TypeScript** | ✅ 0 erros (validado com `pnpm check`) |
 | **Build** | ✅ Sucesso (validado com `pnpm build`) |
-| **Integração Clima** | ✅ Consenso Multi-API integrado no `scheduler.ts` |
-| **Integração Agronomia** | ✅ Perfis operacionais e calendário sazonal integrados |
-| **Integração Revalidação** | ✅ Schedule adaptativo (05h-19h) ativo via `revalidationScheduler` |
-| **Integração Mercado** | ✅ Motor interpretativo e boletim consolidado integrados |
-| **Bootstrap** | ✅ `scheduler.start()` ativado no `server/_core/index.ts` |
-| **Dívida Técnica** | ✅ `cronJobs.ts` removido completamente |
+| **Inteligência Agronômica** | ✅ Refinada com nuances de deriva, lavagem e Delta T contextual |
+| **Anti-Spam** | ✅ Thresholds aumentados e cooldown de 3h para reduzir ruído |
+| **Inteligência de Mercado** | ✅ Lógica de magnitude crítica e filtragem por relevância real |
+| **UX Operacional** | ✅ Dashboard simplificado (`Home.tsx`) com foco em status rápido |
+| **Observabilidade** | ✅ Logs enriquecidos com metadados de decisão e contexto sazonal |
 
-## Mudanças Realizadas na Fase 8
+## Mudanças Realizadas na Fase 9
 
-### 1. Integração do Scheduler (`scheduler.ts`) ✅
-- **Consenso Multi-API**: Substituída chamada direta ao OpenWeather pelo `weatherConsensusEngine.fetchConsensus`.
-- **Perfis Sazonais**: Implementada análise via `analyzeSeasonalProfiles` usando o contexto regional de Canarana-MT.
-- **Revalidação Adaptativa**: O agendamento fixo foi substituído pelo `revalidationScheduler`, que gerencia a frequência de checagem (mais intensa de manhã, espaçada à tarde).
-- **Anti-Spam**: Integrada a lógica de `shouldSendAlert` que utiliza o estado persistente por fazenda para evitar notificações redundantes.
-- **Mercado Interpretativo**: Substituída a análise de notícias genérica pelo motor de inteligência que gera boletins com impacto econômico e operacional.
+### 1. Refinamento de Inteligência ✅
+- **Agronomia (`operationalProfiles.ts`)**: Adicionada lógica de incorporação para pré-emergentes e nuances de estresse hídrico no Delta T.
+- **Mercado (`marketIntelligence.ts`)**: Implementada magnitude "crítica" e impacto misto para o Dólar. Filtragem de alertas agora foca em categorias críticas e culturas monitoradas.
 
-### 2. Ativação do Bootstrap (`server/_core/index.ts`) ✅
-- O scheduler agora é iniciado automaticamente no momento em que o servidor sobe.
-- Configuração inicial: Relatório às 05:00, Mercado às 08:00, Checagem urgente a cada 30min.
-- Logs estruturados de bootstrap adicionados para monitoramento de inicialização.
+### 2. Redução de Ruído (Anti-Spam) ✅
+- **Revalidação (`revalidationEngine.ts`)**: Thresholds de variação climática aumentados (Vento: 8km/h, Temp: 5°C). Cooldown entre alertas aumentado para 180 minutos (3h).
+- **Relatório Inicial**: Restrito à janela das 05:00 às 07:00 para evitar alertas de "primeira checagem" no meio do dia.
 
-### 3. Limpeza de Código ✅
-- O arquivo `server/services/cronJobs.ts` foi removido, eliminando a duplicidade de lógica de agendamento e reduzindo a dívida técnica crítica.
+### 3. UX Enxuta e Minimalista ✅
+- **Frontend (`Home.tsx`)**: Removidos elementos visuais excessivos. Criado resumo operacional rápido com Delta T, Vento, Umidade e Confiança Climática.
+- **Estética**: Suporte a Dark Mode aprimorado e foco total no status da fazenda ativa.
+
+### 4. Observabilidade Estruturada ✅
+- **Logs (`scheduler.ts`)**: Inclusão de metadados detalhados em cada execução (score, período sazonal, motivo da decisão anti-spam).
 
 ## Arquivos Alterados nesta Sessão
 
 | Arquivo | Ação | Descrição |
 |---|---|---|
-| `server/services/scheduler.ts` | Alterado | Integração de todos os motores da Fase 7 |
-| `server/services/operationalProfiles.ts` | Alterado | Exportação de funções de formatação e correção de chamadas internas |
-| `server/_core/index.ts` | Alterado | Ativação do bootstrap do scheduler |
-| `server/services/cronJobs.ts` | Removido | Eliminação de código legado obsoleto |
-| `docs/context/CURRENT_PHASE.md` | Atualizado | Estado da Fase 8 |
-| `docs/context/MASTER_CONTEXT.md` | Atualizado | Contexto mestre atualizado |
+| `server/services/operationalProfiles.ts` | Alterado | Refinamento da lógica agronômica |
+| `server/services/revalidationEngine.ts` | Alterado | Ajuste de thresholds e cooldown anti-spam |
+| `server/services/marketIntelligence.ts` | Alterado | Refinamento da inteligência de mercado |
+| `client/src/pages/Home.tsx` | Alterado | Simplificação da UX para Dashboard Operacional |
+| `server/services/scheduler.ts` | Alterado | Melhoria nos logs estruturados |
 
 ## Próxima Sequência Recomendada
 
-### Fase 9 — UX Multi-Fazenda e Dashboard
-- **Módulo 1**: Implementar seletor de fazenda ativa no Frontend.
-- **Módulo 2**: Criar telas de CRUD de fazendas (nome, coordenadas, cultura principal).
-- **Módulo 3**: Adaptar o Dashboard para refletir os dados da fazenda selecionada.
-- **Módulo 4**: Implementar visualização dos novos perfis operacionais na UI.
-
-## Definição de "Pronto para Continuar"
-O projeto está em estado **Operacional Autônomo**. O backend está completo em termos de lógica de inteligência e agendamento. A próxima grande fronteira é a experiência do usuário (UX) para gerenciar múltiplas propriedades.
+### Fase 10 — Expansão e Robustez
+- **Módulo 1**: Integração real de APIs secundárias (INMET/ECMWF) no consenso.
+- **Módulo 2**: Implementação de relatórios em PDF para exportação de histórico.
+- **Módulo 3**: Refinamento de permissões e multi-usuário.
